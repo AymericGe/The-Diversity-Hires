@@ -48,8 +48,9 @@ The HUD should provide players with important game information clearly and updat
    - Update the displayed balance when the currency value changes.
 
 5. **Game Status Display**
-   - Display useful game-state information when appropriate.
-   - Possible status information may include level transitions, game over state, or other gameplay states supported by the game.
+   - Display temporary status information related to active gameplay, such as level transition messages.
+   - The HUD will only display game-state information provided by existing game systems and will not implement or modify the underlying game-state logic.
+   - Full-screen states such as the existing Game Over screen are outside the scope of the Gameplay HUD unless additional integration is required.
 
 6. **Clear and Non-Intrusive HUD Layout**
    - Arrange HUD elements so that important information is easy to read.

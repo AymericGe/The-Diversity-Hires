@@ -10,13 +10,13 @@ We are a seven-member team developing a records and achievements system for Spac
 
 | Member | GitHub | Responsibility |
 | --- | --- | --- |
-| 진혜청 (Leader) | [clover0409](https://github.com/clover0409) | Team coordination, cross-team communication, and PR reviews. |
-| 위준걸 | [arjen12138](https://github.com/arjen12138) | Game-result capture and records data model. |
-| 담조곤 | [wrxtzk](https://github.com/wrxtzk) | Local saving, loading, and data recovery. |
-| 손첸디 | [sunchendi](https://github.com/sunchendi) | Personal bests and top-ten rankings. |
-| 하함준 | [Godovo666](https://github.com/Godovo666) | Achievement conditions and unlock logic. |
-| 허린호 | [woshi777](https://github.com/woshi777) | Records screen and achievement notifications. |
-| 양천시 | [MiooYoung](https://github.com/MiooYoung) | Gameplay event integration and regression testing. |
+| Chen Huiqing | [clover0409](https://github.com/clover0409) | Team coordination, cross-team communication, and PR reviews. |
+| Wei Junjie | [arjen12138](https://github.com/arjen12138) | Game-result capture and records data model. |
+| Tan Zhaokun | [wrxtzk](https://github.com/wrxtzk) | Local saving, loading, and data recovery. |
+| Sun Chendi | [sunchendi](https://github.com/sunchendi) | Personal bests and top-ten rankings. |
+| He Hanjun | [Godovo666](https://github.com/Godovo666) | Achievement conditions and unlock logic. |
+| Xu Linhao | [woshi777](https://github.com/woshi777) | Records screen and achievement notifications. |
+| Yang Tianshi | [MiooYoung](https://github.com/MiooYoung) | Gameplay event integration and regression testing. |
 
 ## 2. Team Requirements
 
