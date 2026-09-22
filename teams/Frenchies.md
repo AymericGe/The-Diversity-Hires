@@ -24,18 +24,24 @@ We are developing the **Main Menu** of the Space Invaders game.
 
 This menu is the central hub that connects players to gameplay, settings, achievements, and customization options.
 
-### Specific Requirements
-
-- **User-Friendly Navigation** – The menu must be intuitive, with clear labels and logical flow.
-- **Dynamic Integration** – Each submenu (Settings, Shop, Hangar, Achievements, etc.) must directly connect to its respective game module.
-- **Scalability** – The menu should allow easy addition of future features without breaking existing functionality.
-- **Consistency** – Visual and audio design must align with the overall game style.
-- **Performance** – The menu must load quickly and respond smoothly to user input.
+| ID | Requirement |
+|---|---|
+| **1.1** | **Implement Main Menu navigation:** Display all available menu options (Play, Settings, Shop, Hangar, Achievements, etc.) and allow the player to move between them using keyboard or controller input. Highlight the currently selected option and prevent invalid selections. |
+| **1.2** | **Implement menu audio feedback:** Play a navigation sound when changing the selected option and a confirmation sound when selecting an option. Play a distinct sound when returning to the previous menu. Menu sounds must respect the audio volume configured by the player. |
+| **1.3** | **Implement game mode selection:** Provide a game mode screen accessible from the Main Menu. Display the available modes, including Single Player and Two Player, allow the player to select a mode, and launch the corresponding game mode after confirmation. |
+| **1.4** | **Implement Settings access:** Provide a direct link from the Main Menu to the Settings module. Display the available audio and visual settings, allow the player to modify them, apply the changes, and return to the Main Menu without losing the selected values. |
+| **1.5** | **Implement Shop and Hangar access:** Provide direct links from the Main Menu to the Shop and Hangar modules. The Shop must allow access to available items and currency, while the Hangar must display the player's available ships and customization options. Return to the Main Menu must be possible from both modules. |
 
 ## Dependencies
 
-The main menu relies on several modules to provide its features:
+The Main Menu depends on the following modules:
 
-- **Sound & Visual Settings** – Adjustable audio and video options (Modules 1 & 2).
-- **Game Mode Selection** – Choose between single-player and two-player modes (Module 10).
-- **Shop & Hangar** – Access currency, items, and ship variety (Modules 4, 5 & 9).
+- **Sound & Visual Settings** → [Modules 1](/teams/chanyoung.md) & [Modules 2](/teams/the-diversity-hires.md)
+  The Main Menu must provide access to the game's audio and video settings.
+
+- **Game Mode Selection** → [Module 10](/teams/friends.md)  
+  The Main Menu must allow the player to select between single-player and two-player game modes.
+
+- **Shop & Hangar** → [Modules 4](/teams/Hancode.md), [Module 5](/teams/Best-French.md) & [Module 9](/teams/KimchiBaguette.md) 
+  The Main Menu must provide access to the shop, currency, available items, and ship customization.
+
