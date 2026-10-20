@@ -1,9 +1,8 @@
 package entity;
 
-import java.util.logging.Logger;
-
 import engine.Cooldown;
 import engine.Core;
+import java.util.logging.Logger;
 
 /**
  * Manages the bonus enemy ship that sometimes crosses the top of the screen.
@@ -48,8 +47,10 @@ public class BonusEnemyManager {
 	 */
 	public final void update(final int screenWidth) {
 		if (this.bonusShip != null) {
-			if (!this.bonusShip.isDestroyed())
+			if (!this.bonusShip.isDestroyed()) {
 				this.bonusShip.move(BONUS_SHIP_SPEED, 0);
+				this.bonusShip.update(); // <-- ADD THIS LINE
+			}
 			else if (this.explosionCooldown.checkFinished())
 				this.bonusShip = null;
 		}
