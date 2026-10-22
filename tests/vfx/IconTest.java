@@ -14,7 +14,7 @@ public final class IconTest {
 	}
 
 	public static void main(final String[] args) {
-		check(Icon.values().length == 17,
+		check(Icon.values().length == 19,
 				"HUD, menu, settings and title screen icons exist");
 
 		for (Icon icon : Icon.values()) {
