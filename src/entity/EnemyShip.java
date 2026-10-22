@@ -1,11 +1,10 @@
 package entity;
 
-import java.awt.Color;
-
 import engine.Cooldown;
 import engine.Core;
-import engine.GameColors;
 import engine.DrawManager.SpriteType;
+import engine.GameColors;
+import java.awt.Color;
 
 /**
  * Implements a enemy ship, to be destroyed by the player.
@@ -32,6 +31,11 @@ public class EnemyShip extends Entity {
 	private int pointValue;
 	/** Cooldown between this ship's shots. Null if the ship cannot shoot. */
 	private Cooldown shootingCooldown;
+	/** Cooldown for alternating the bonus ship's flashing colors. */
+	private Cooldown colorFlashCooldown;
+	/** Current color state toggle for flashing. */
+	private boolean isFlashAlternate;
+
 	/**
 	 * Constructor, establishes the ship's properties.
 	 * 
@@ -73,12 +77,12 @@ public class EnemyShip extends Entity {
 	 * known starting properties.
 	 */
 	public EnemyShip() {
-		 // super(-32, 60, 16 * 2, 7 * 2, Color.RED);
-		super(-32, 60, 16 * 2, 7 * 2, GameColors.ENEMY_SPECIAL);
+		super(-32, 60, 16 * 2, 7 * 2, Color.YELLOW);
 		this.spriteType = SpriteType.EnemyShipSpecial;
 		this.isDestroyed = false;
 		this.pointValue = BONUS_TYPE_POINTS;
-
+		this.colorFlashCooldown = Core.getCooldown(150); // switches every 150ms
+		this.isFlashAlternate = false;
 	}
 
 	private static Color colorFor(final SpriteType spriteType) {
@@ -120,8 +124,16 @@ public class EnemyShip extends Entity {
 	 * Updates attributes, mainly used for animation purposes.
 	 */
 	public final void update() {
-		if (this.animationCooldown.checkFinished()) {
-			this.animationCooldown.reset();
+		if (this.spriteType == SpriteType.EnemyShipSpecial && !this.isDestroyed) {
+			if (this.colorFlashCooldown != null && this.colorFlashCooldown.checkFinished()) {
+				this.colorFlashCooldown.reset();
+				this.isFlashAlternate = !this.isFlashAlternate;
+				this.setColor(this.isFlashAlternate ? Color.PINK : Color.YELLOW);
+				}
+			}
+
+    	if (this.animationCooldown != null && this.animationCooldown.checkFinished()) {
+        	this.animationCooldown.reset();
 
 			switch (this.spriteType) {
 			case EnemyShipA1:
