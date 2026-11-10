@@ -213,7 +213,31 @@ public final class Core {
 										CampaignStageData.getTotalStages()));
 						LOGGER.info("Highest Stage is: " + CampaignManager.getMaxCampaignStage());
 
-						gameState = new GameState(gameState.getLevel() + 1,
+
+                        // US-03: Open the Shop between Campaign stages.
+                        // Do not open after the final stage or game over.
+                        if (gameState.getLevel()
+                                < CampaignStageData.getTotalStages()
+                                && gameState.getLivesRemaining() > 0) {
+
+                            LOGGER.info("Opening Shop after Stage "
+                                    + gameState.getLevel());
+
+                            currentScreen = new ShopScreen(
+                                    width, height, FPS, shopController);
+
+                            // Wait until the player leaves the Shop.
+                            frame.setScreen(currentScreen);
+
+                            // Retry any pending rewards after purchases.
+                            resolveRewards(false);
+
+                            // Refresh upgrades purchased in the Shop.
+                            campaignUpgrades = CampaignUpgrades.from(
+                                    playerAssets.snapshot());
+                        }
+
+                        gameState = new GameState(gameState.getLevel() + 1,
 								gameState.getScore(),
 								gameState.getLivesRemaining(),
 								gameState.getBulletsShot(),
@@ -299,10 +323,22 @@ public final class Core {
 					break;
 				case 8:
 					// Infinite mode & score.
+                    // Start Endless with the selected ship's base health.
+                    gameState = new GameState(
+                            1,
+                            0,
+                            selectedShip.getMaxLives(),
+                            0,
+                            0);
 					RunSession infiniteSession = new RunSession(UUID.randomUUID().toString());
 					recordsService.startRun(infiniteSession.getRunId());
-					currentScreen = new InfiniteGameScreen(gameState, width, height,
-							FPS, infiniteSession);
+                    currentScreen = new InfiniteGameScreen(
+                            gameState,
+                            width,
+                            height,
+                            FPS,
+                            infiniteSession,
+                            selectedShip);
 					LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 							+ " infinite game screen at " + FPS + " fps.");
 					runEndless((InfiniteGameScreen) currentScreen, endlessRewards,

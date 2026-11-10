@@ -9,6 +9,10 @@ import java.util.Collections;
 import java.util.List;
 
 public final class ShopProducts {
+
+    public static final String RAPID_BURST_ID =
+            "ability.rapid_burst";
+
     private ShopProducts() { }
 
     public static List<ShopProduct> availableProducts() {
@@ -22,10 +26,20 @@ public final class ShopProducts {
             }
         }
         for (ShipType ship : ShipType.values()) {
-            boolean available = ship != ShipType.SPEEDSTER;
-            products.add(ShopProduct.ship(ship, available, available ? 0 : 200));
-        }
-        return Collections.unmodifiableList(products);
+    boolean available = ship != ShipType.SPEEDSTER;
+    products.add(ShopProduct.ship(ship, available, available ? 0 : 200));
+}
+
+// Cross-Ship Upgrade: Rapid Burst
+products.add(new ShopProduct(
+        RAPID_BURST_ID,
+        "Rapid Burst",
+        Category.UNLOCKABLE,
+        250,
+        "Unlock Speedster burst for other ships."
+));
+
+return Collections.unmodifiableList(products);
     }
 
     /** Keep one card per upgrade, advancing it only after a completed purchase. */
