@@ -84,7 +84,7 @@ class UpgradeShopScreenTest {
         assertEquals(50, assets.getBalance());
         tap(KeyEvent.VK_ENTER);
         assertEquals(50, assets.getBalance());
-        assertEquals(6, controller.getProducts().size());
+        assertEquals(7, controller.getProducts().size());
     }
 
     @Test
@@ -121,6 +121,8 @@ class UpgradeShopScreenTest {
                 assets.snapshot().getUnlockedContentIds());
         byte[] written = Files.readAllBytes(save);
         tap(KeyEvent.VK_DOWN);
+        tap(KeyEvent.VK_LEFT);
+        tap(KeyEvent.VK_LEFT);
         tap(KeyEvent.VK_ENTER);
         assertArrayEquals(written, Files.readAllBytes(save));
         assertEquals(700, assets.getBalance());
