@@ -15,6 +15,39 @@ public final class ShopProducts {
 
     private ShopProducts() { }
 
+    /**
+     * Products purchased using permanent Account Credits.
+     */
+    public static List<ShopProduct> accountProducts() {
+        List<ShopProduct> products = new ArrayList<ShopProduct>();
+
+        for (ShopProduct product : availableProducts()) {
+            if (product.getShipType() != null) {
+                products.add(product);
+            }
+        }
+
+        return Collections.unmodifiableList(products);
+    }
+
+    /**
+     * Temporary combat upgrades purchased using Run Credits.
+     */
+    public static List<ShopProduct> runProducts() {
+        List<ShopProduct> products = new ArrayList<ShopProduct>();
+
+        for (ShopProduct product : availableProducts()) {
+            if (PermanentUpgrade.forProduct(product.getId()) != null
+                    || RAPID_BURST_ID.equals(product.getId())) {
+
+                products.add(product);
+            }
+        }
+
+        return Collections.unmodifiableList(products);
+    }
+
+
     public static List<ShopProduct> availableProducts() {
         List<ShopProduct> products = new ArrayList<ShopProduct>();
         for (PermanentUpgrade upgrade : PermanentUpgrade.values()) {
