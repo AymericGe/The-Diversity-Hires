@@ -88,4 +88,3 @@ class RunShopIsolationTest {
                                 p.getShipType() != null));
     }
 }
-
