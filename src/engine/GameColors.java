@@ -58,6 +58,12 @@ public final class GameColors {
 
     public static final Color ICON_UI = new Color(232, 234, 246);
 
+    public static final Color GLOW_HYPERFIRE = new Color(255, 120, 40);
+
+    public static final Color GLOW_TWIN_CANNON = new Color(255, 220, 70);
+
+    public static final Color GLOW_CHAMELEON = new Color(240, 100, 200);
+
 
     private GameColors() {
     }
