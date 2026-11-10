@@ -323,10 +323,22 @@ public final class Core {
 					break;
 				case 8:
 					// Infinite mode & score.
+                    // Start Endless with the selected ship's base health.
+                    gameState = new GameState(
+                            1,
+                            0,
+                            selectedShip.getMaxLives(),
+                            0,
+                            0);
 					RunSession infiniteSession = new RunSession(UUID.randomUUID().toString());
 					recordsService.startRun(infiniteSession.getRunId());
-					currentScreen = new InfiniteGameScreen(gameState, width, height,
-							FPS, infiniteSession);
+                    currentScreen = new InfiniteGameScreen(
+                            gameState,
+                            width,
+                            height,
+                            FPS,
+                            infiniteSession,
+                            selectedShip);
 					LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 							+ " infinite game screen at " + FPS + " fps.");
 					runEndless((InfiniteGameScreen) currentScreen, endlessRewards,
