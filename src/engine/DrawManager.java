@@ -1542,6 +1542,50 @@ public final class DrawManager {
         backBufferGraphics.setColor(Color.CYAN);
         backBufferGraphics.drawOval(x, y, width, height);
     }
+    /**
+     * Draws a colored glow around the ship for every active timed power-up.
+     *
+     * @param ship         the player ship
+     * @param activeBuffs  names of the active power-ups (from BuffManager)
+     */
+    public void drawPowerUpGlow(final Entity ship,
+                                final java.util.Set<String> activeBuffs) {
+        int padding = 6;
+        for (String name : activeBuffs) {
+            Color color = glowColorFor(name);
+            if (color == null)
+                continue;
+
+            int x = ship.getPositionX() - padding;
+            int y = ship.getPositionY() - padding;
+            int width = ship.getWidth() + padding * 2;
+            int height = ship.getHeight() + padding * 2;
+
+            // soft inner glow
+            backBufferGraphics.setColor(new Color(color.getRed(),
+                    color.getGreen(), color.getBlue(), 70));
+            backBufferGraphics.fillOval(x, y, width, height);
+            // sharp outline
+            backBufferGraphics.setColor(color);
+            backBufferGraphics.drawOval(x, y, width, height);
+
+            padding += 3; // several power-ups: rings get bigger
+        }
+    }
+
+    /** Glow color per power-up name, or null if it has no glow. */
+    private static Color glowColorFor(final String name) {
+        switch (name) {
+            case "Hyperfire":
+                return GameColors.GLOW_HYPERFIRE;
+            case "Twin Cannon":
+                return GameColors.GLOW_TWIN_CANNON;
+            case "Chameleon Hull":
+                return GameColors.GLOW_CHAMELEON;
+            default:
+                return null; // Energy Shield already has drawShield
+        }
+    }
 
     private String getKeyDisplayText(final int keyCode) {
         switch (keyCode) {

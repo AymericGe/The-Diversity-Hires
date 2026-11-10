@@ -880,6 +880,11 @@ public class GameScreen extends Screen {
             drawManager.drawShield(this, this.ship);
         }
 
+        if (!this.ship.isDestroyed())
+            drawManager.drawPowerUpGlow(this.ship,
+                    this.itemManager.getBuffManager()
+                            .getActiveBuffsRemainingTime().keySet());
+
 		EnemyShip bonusShip = this.bonusEnemyManager.getShip();
 		if (bonusShip != null)
 			drawManager.drawEntity(bonusShip, bonusShip.getPositionX(),
