@@ -2,6 +2,7 @@ package engine;
 
 import entity.ShipType;
 import entity.item.ChameleonHull;
+import boss.BossHudInfo;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -20,6 +21,7 @@ import hud.FloatingScoreHud;
 import currency.PermanentUpgrade;
 import currency.PlayerAssetsState;
 import currency.ShopCatalog.Category;
+import engine.DrawManager.SpriteType;
 import shop.ShopController.SaveStatus;
 import shop.ShopProduct;
 import records.Achievement;
@@ -1505,6 +1507,56 @@ public final class DrawManager {
                     screen.getWidth() - textWidth - 10, y);
             y += 20;
         }
+    }
+
+    /**
+     * Draws the boss health bar and name at the top of the screen.
+     *
+     * @param screen Screen to draw on.
+     * @param hudInfo Boss HUD information containing health and visibility.
+     */
+    public void drawBossHealthBar(final Screen screen, final BossHudInfo hudInfo) {
+        if (hudInfo == null || !hudInfo.isVisible()) {
+            return;
+        }
+
+        int currentHp = hudInfo.getCurrentHealth();
+        int maxHp = hudInfo.getMaxHealth();
+        if (maxHp <= 0) {
+            return;
+        }
+
+        int barWidth = 200;
+        int barHeight = 8;
+        int barX = (screen.getWidth() - barWidth) / 2;
+        int barY = 32;
+
+        float ratio = Math.max(0.0f, (float) currentHp / maxHp);
+        int fillWidth = (int) (barWidth * ratio);
+
+        // 1. Background (dark container)
+        backBufferGraphics.setColor(new Color(50, 50, 50, 220));
+        backBufferGraphics.fillRect(barX, barY, barWidth, barHeight);
+
+        // 2. Health Fill (Green > Orange > Red based on health ratio)
+        if (ratio > 0.5f) {
+            backBufferGraphics.setColor(Color.GREEN);
+        } else if (ratio > 0.2f) {
+            backBufferGraphics.setColor(Color.ORANGE);
+        } else {
+            backBufferGraphics.setColor(Color.RED);
+        }
+        backBufferGraphics.fillRect(barX, barY, fillWidth, barHeight);
+
+        // 3. Border Outline
+        backBufferGraphics.setColor(Color.WHITE);
+        backBufferGraphics.drawRect(barX, barY, barWidth, barHeight);
+
+        // 4. Boss Name / Label above bar
+        backBufferGraphics.setFont(fontRegular);
+        String label = hudInfo.getBossType().name();
+        int textWidth = fontRegularMetrics.stringWidth(label);
+        backBufferGraphics.drawString(label, (screen.getWidth() - textWidth) / 2, barY - 4);
     }
 
     /**

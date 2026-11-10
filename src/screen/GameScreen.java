@@ -67,6 +67,7 @@ import entity.item.AnnihilatorItem;
 import entity.item.BuffHud;
 import entity.item.ClusterGrenadeItem;
 import entity.item.TwinCanon;
+import boss.BossHudInfo;
 
 /**
  * Implements the game screen, where the action happens.
@@ -919,6 +920,9 @@ public class GameScreen extends Screen {
 		drawManager.drawLives(this, this.playerStatus.getLives(),
 				this.playerStatus.getMaxLives());
 		drawManager.drawLevel(this, this.level, CampaignStageData.getTotalStages());
+		if (this.bossManager != null) {
+			drawManager.drawBossHealthBar(this, this.bossManager.getHudInfo());
+		}
 		try { // Includes rewards awaiting settlement; read every frame.
 			drawManager.drawCredits(this, Core.getAssetHudSnapshot().getCredits());
 		} catch (IllegalStateException e) {
