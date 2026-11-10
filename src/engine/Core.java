@@ -73,7 +73,14 @@ public final class Core {
 	private static PlayerAssets playerAssets;
 	/** Shop controller shared for this application session. */
 	private static ShopController shopController;
-	/** Rewards shared by Campaign stages and the HUD for this session. */
+
+    /** Temporary progression of the current game run. */
+    private static RunProgression runProgression;
+
+    /** Shop that spends temporary Run Credits. */
+    private static ShopController runShopController;
+
+    /** Rewards shared by Campaign stages and the HUD for this session. */
 	private static CampaignRewards campaignRewards;
 	private static EndlessRewards endlessRewards;
 	private static RecordsService recordsService;
@@ -91,9 +98,9 @@ public final class Core {
 	 * @param args
 	 *             Program args, ignored.
 	 */
-	public static void main(final String[] args) {
-		run(ShopProducts.availableProducts());
-	}
+    public static void main(final String[] args) {
+        run(ShopProducts.accountProducts());
+    }
 
 	/** Starts the game with the supplied catalog; previews can supply isolated sample products. */
 	public static void run(final List<ShopProduct> products) {
@@ -173,8 +180,14 @@ public final class Core {
 				// The selected ship decides how many lives the run starts with.
 				LOGGER.info("Selected ship: " + selectedShip.getName());
 
-					CampaignUpgrades campaignUpgrades = CampaignUpgrades.from(playerAssets.snapshot());
-					gameState = new GameState(1, 0, campaignUpgrades.getMaxLives(selectedShip),
+
+// Each new Campaign starts with fresh progression.
+                startRunProgression();
+
+                CampaignUpgrades campaignUpgrades =
+                        runProgression.getUpgrades();
+
+                gameState = new GameState(1, 0, campaignUpgrades.getMaxLives(selectedShip),
 							0, 0);
 
 					// Game & score.
@@ -224,7 +237,7 @@ public final class Core {
                                     + gameState.getLevel());
 
                             currentScreen = new ShopScreen(
-                                    width, height, FPS, shopController);
+                                    width, height, FPS, runShopController);
 
                             // Wait until the player leaves the Shop.
                             frame.setScreen(currentScreen);
@@ -233,8 +246,7 @@ public final class Core {
                             resolveRewards(false);
 
                             // Refresh upgrades purchased in the Shop.
-                            campaignUpgrades = CampaignUpgrades.from(
-                                    playerAssets.snapshot());
+                            campaignUpgrades = runProgression.getUpgrades();
                         }
 
                         gameState = new GameState(gameState.getLevel() + 1,
@@ -323,6 +335,8 @@ public final class Core {
 					break;
 				case 8:
 					// Infinite mode & score.
+                    // New Endless run starts with fresh temporary progression.
+                    startRunProgression();
                     // Start Endless with the selected ship's base health.
                     gameState = new GameState(
                             1,
@@ -569,7 +583,36 @@ public final class Core {
 		return FileManager.getInstance();
 	}
 
-	/**
+
+    /**
+     * Starts fresh temporary progression for Campaign or Endless.
+     * Permanent account assets remain unchanged.
+     */
+    private static void startRunProgression() {
+
+        runProgression = new RunProgression();
+
+        PlayerAssets runAssets = runProgression.getAssets();
+
+        runShopController = ShopController.forRun(
+                runAssets,
+                getFileManager());
+
+        // Run rewards must never overwrite account saves.
+        campaignRewards = new CampaignRewards(
+                runAssets,
+                getFileManager(),
+                null,
+                false);
+
+        endlessRewards = new EndlessRewards(
+                runAssets,
+                getFileManager(),
+                null,
+                false);
+    }
+
+    /**
 	 * Returns the initialized session controller without creating or reloading assets.
 	 *
 	 * @return The existing shop controller for this application session.
@@ -588,15 +631,45 @@ public final class Core {
 	 *
 	 * @throws IllegalStateException if startup has not initialized assets and rewards
 	 */
-	public static AssetHudSnapshot getAssetHudSnapshot() {
-		ShopController shop = getShopController();
-		if (campaignRewards == null) {
-			throw new IllegalStateException("Campaign rewards have not been initialized.");
-		}
-		long pending = campaignRewards.getPendingCurrency();
-		if (endlessRewards != null) pending += endlessRewards.getPendingCurrency();
-		return new AssetHudSnapshot((long) shop.getBalance() + pending);
-	}
+
+    public static AssetHudSnapshot getAssetHudSnapshot() {
+
+        // Active gameplay uses temporary Run Credits.
+        if (runProgression != null) {
+
+            long pending = 0;
+
+            if (campaignRewards != null) {
+                pending += campaignRewards.getPendingCurrency();
+            }
+
+            if (endlessRewards != null) {
+                pending += endlessRewards.getPendingCurrency();
+            }
+
+            return new AssetHudSnapshot(
+                    (long) runProgression.getBalance() + pending);
+        }
+
+        // Preserve previous behavior outside a run.
+        ShopController shop = getShopController();
+
+        if (campaignRewards == null) {
+            throw new IllegalStateException(
+                    "Campaign rewards have not been initialized.");
+        }
+
+        long pending = campaignRewards.getPendingCurrency();
+
+        if (endlessRewards != null) {
+            pending += endlessRewards.getPendingCurrency();
+        }
+
+        return new AssetHudSnapshot(
+                (long) shop.getBalance() + pending);
+    }
+
+
 
 	/**
 	 * Controls creation of new cooldowns.
