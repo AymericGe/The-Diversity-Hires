@@ -59,6 +59,9 @@ public final class GameColors {
     public static final Color ICON_UI = new Color(232, 234, 246);
 
 
+    public static final Color HEAT_BAR_BACKGROUND = new Color(40, 44, 64);
+
+
     private GameColors() {
     }
 }

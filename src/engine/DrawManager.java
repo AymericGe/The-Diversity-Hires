@@ -33,6 +33,7 @@ import entity.GrenadeFragment;
 import entity.item.AnnihilatorItem;
 import entity.item.ClusterGrenadeItem;
 import entity.Ship;
+import entity.WeaponHeat;
 import entity.Bullet;
 import vfx.Icon;
 import vfx.RankBadge;
@@ -655,6 +656,64 @@ public final class DrawManager {
             backBufferGraphics.setColor(flicker ? Color.WHITE : Color.RED);
             backBufferGraphics.fillOval(centerX - radius, startY - radius, radius * 2, radius * 2);
         }
+    }
+
+    /**
+     * Draws the gun heat bar above the player's ship. The bar goes from
+     * green to orange to red as the gun heats up, and flashes red with an
+     * "OVERHEATED" label while the gun is jammed. Nothing is drawn while
+     * the gun is cold.
+     *
+     * @param screen
+     *                 Screen to draw on.
+     * @param ship
+     *                 Player ship whose gun heat is shown.
+     */
+    public void drawWeaponHeat(final Screen screen, final Ship ship) {
+        if (ship.isDestroyed())
+            return;
+        long now = System.currentTimeMillis();
+        WeaponHeat weaponHeat = ship.getWeaponHeat();
+        double heat = weaponHeat.getHeat(now);
+        boolean jammed = weaponHeat.isJammed(now);
+        if (heat <= 0 && !jammed)
+            return;
+
+        int barWidth = ship.getWidth();
+        int barHeight = 4;
+        int barX = ship.getPositionX();
+        int barY = ship.getPositionY() - barHeight - 3;
+        boolean flashOn = (now / 150) % 2 == 0;
+
+        Color fill;
+        if (jammed)
+            fill = flashOn ? GameColors.DAMAGE : GameColors.EXPLOSION_YELLOW;
+        else if (heat < 0.5)
+            fill = GameColors.HIGHLIGHT;
+        else if (heat < 0.8)
+            fill = GameColors.EXPLOSION_ORANGE;
+        else
+            fill = GameColors.DAMAGE;
+
+        Color previous = backBufferGraphics.getColor();
+        backBufferGraphics.setColor(GameColors.HEAT_BAR_BACKGROUND);
+        backBufferGraphics.fillRect(barX, barY, barWidth, barHeight);
+        backBufferGraphics.setColor(fill);
+        backBufferGraphics.fillRect(barX, barY, (int) Math.round(barWidth
+                * heat), barHeight);
+
+        if (jammed && flashOn) {
+            String label = "OVERHEATED";
+            backBufferGraphics.setFont(fontRegular.deriveFont(10f));
+            FontMetrics metrics = backBufferGraphics.getFontMetrics();
+            int labelX = ship.getPositionX() + ship.getWidth() / 2
+                    - metrics.stringWidth(label) / 2;
+            labelX = Math.max(2, Math.min(labelX, screen.getWidth()
+                    - metrics.stringWidth(label) - 2));
+            backBufferGraphics.setColor(GameColors.DAMAGE);
+            backBufferGraphics.drawString(label, labelX, barY - 4);
+        }
+        backBufferGraphics.setColor(previous);
     }
 
     /**

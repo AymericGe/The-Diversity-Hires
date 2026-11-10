@@ -942,6 +942,8 @@ public class GameScreen extends Screen {
 					this,
 					this.annihilator.getChargeProgress());
 
+        drawManager.drawWeaponHeat(this, this.ship);
+
         drawManager.drawHorizontalLine(this, SEPARATION_LINE_HEIGHT - 1);
 
         // Countdown to game start.
