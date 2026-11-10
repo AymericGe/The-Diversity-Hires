@@ -48,6 +48,9 @@ public class Ship extends Entity {
     /** Whether the Hyperfire buff is currently enabled. */
     private boolean hyperfireEnabled = false;
 
+    /** Heat of the gun; shooting constantly overheats and jams it. */
+    private final WeaponHeat weaponHeat = new WeaponHeat();
+
     /** Distance from the ship center to each barrel of the Twin Cannon. */
     private static final int TWIN_CANNON_OFFSET = 8;
     /** Minimum time between two grenade launches. */
@@ -239,7 +242,12 @@ public class Ship extends Entity {
             return 0;
         }
 
+        if (!this.weaponHeat.canShoot(currentTime)) {
+            return 0;
+        }
+
         lastShotTime = currentTime;
+        this.weaponHeat.addShot(currentTime);
 
         int x = this.positionX + this.width / 2;
         int y = this.positionY;
@@ -491,6 +499,15 @@ public class Ship extends Entity {
      */
     public final ShipType getShipType() {
         return this.shipType;
+    }
+
+    /**
+     * Getter for the heat of the gun.
+     *
+     * @return Weapon heat of this ship.
+     */
+    public final WeaponHeat getWeaponHeat() {
+        return this.weaponHeat;
     }
 
     /**
