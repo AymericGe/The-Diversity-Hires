@@ -83,6 +83,8 @@ public final class Core {
     /** Rewards shared by Campaign stages and the HUD for this session. */
 	private static CampaignRewards campaignRewards;
 	private static EndlessRewards endlessRewards;
+    /** Permanent rewards earned from completed runs. */
+    private static AccountRunRewards accountRewards;
 	private static RecordsService recordsService;
 	/** Application logger. */
 	private static final Logger LOGGER = Logger.getLogger(Core.class
@@ -141,6 +143,9 @@ public final class Core {
 
 		campaignRewards = new CampaignRewards(playerAssets, getFileManager());
 		endlessRewards = new EndlessRewards(playerAssets, getFileManager());
+        accountRewards = new AccountRunRewards(
+                playerAssets,
+                getFileManager());
 
 		recordsService = new RecordsService(new java.io.File(System.getProperty("user.home"),
 				".space-invaders/records-achievements.properties").toPath());
@@ -258,7 +263,24 @@ public final class Core {
 					} while (gameState.getLivesRemaining() > 0
 							&& gameState.getLevel() <= CampaignStageData.getTotalStages());
 
-					RunRecord completedRun = runSession.finish(gameState.getScore(),
+
+                // Reward permanent Credits for cleared Campaign stages.
+                int stagesCleared = Math.max(
+                        0,
+                        Math.min(
+                                gameState.getLevel() - 1,
+                                CampaignStageData.getTotalStages()));
+
+                int accountCreditsEarned = stagesCleared * 30;
+
+                accountRewards.awardRun(
+                        runSession.getRunId(),
+                        accountCreditsEarned);
+
+                resolveRewards(false);
+
+
+                RunRecord completedRun = runSession.finish(gameState.getScore(),
 							gameState.getShipsDestroyed(), System.currentTimeMillis());
 					if (recordsService.completeRun(completedRun))
 						LOGGER.info("Completed run recorded:\n" + RunRecordFormatter.format(completedRun));
@@ -361,7 +383,15 @@ public final class Core {
 					resolveRewards(false);
 
 					gameState = ((InfiniteGameScreen) currentScreen).getGameState();
-					if (!((InfiniteGameScreen) currentScreen).isAbandoned()) {
+
+                    // Reward one permanent Credit per Endless enemy defeated.
+                    accountRewards.awardRun(
+                            infiniteSession.getRunId(),
+                            gameState.getShipsDestroyed());
+
+                    resolveRewards(false);
+
+                    if (!((InfiniteGameScreen) currentScreen).isAbandoned()) {
 						RunRecord infiniteRecord = infiniteSession.finish(gameState.getScore(),
 								gameState.getShipsDestroyed(), System.currentTimeMillis());
 						recordsService.completeRun(infiniteRecord);
@@ -425,8 +455,33 @@ public final class Core {
 		return SettlementResult.SUCCESS;
 	}
 
-	private static boolean resolveRewards(final boolean exiting) {
-		SettlementResult result = retryRewards(campaignRewards, endlessRewards);
+
+    private static SettlementResult retryAllRewards() {
+
+        SettlementResult runResult =
+                retryRewards(campaignRewards, endlessRewards);
+
+        SettlementResult accountResult =
+                accountRewards == null
+                        ? SettlementResult.SUCCESS
+                        : accountRewards.retryPendingRewards();
+
+        if (runResult == SettlementResult.SETTLEMENT_FAILED
+                || accountResult == SettlementResult.SETTLEMENT_FAILED) {
+            return SettlementResult.SETTLEMENT_FAILED;
+        }
+
+        if (runResult == SettlementResult.SAVE_FAILED
+                || accountResult == SettlementResult.SAVE_FAILED) {
+            return SettlementResult.SAVE_FAILED;
+        }
+
+        return SettlementResult.SUCCESS;
+    }
+
+
+    private static boolean resolveRewards(final boolean exiting) {
+		SettlementResult result = retryAllRewards();
 		while (result != SettlementResult.SUCCESS) {
 			String message = result == SettlementResult.SETTLEMENT_FAILED
 					? "Your balance is full. Earned Credits remain pending in this session.\n"
