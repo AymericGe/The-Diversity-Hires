@@ -28,10 +28,31 @@ final class CampaignRewards {
         this(assets, files, null);
     }
 
-    CampaignRewards(PlayerAssets assets, FileManager files, Path savePath) {
-        rewards = new RewardSystem(assets);
-        settlement = new RewardSettlementCoordinator(rewards, assets, files, savePath);
+
+    CampaignRewards(
+            PlayerAssets assets,
+            FileManager files,
+            Path savePath) {
+
+        this(assets, files, savePath, true);
     }
+
+    CampaignRewards(
+            PlayerAssets assets,
+            FileManager files,
+            Path savePath,
+            boolean saveToDisk) {
+
+        rewards = new RewardSystem(assets);
+
+        settlement = new RewardSettlementCoordinator(
+                rewards,
+                assets,
+                files,
+                savePath,
+                saveToDisk);
+    }
+
 
     /** Starts deduplication for a Campaign run without discarding unpaid rewards. */
     void startRun(String runId) {
