@@ -61,7 +61,21 @@ public class Frame extends JFrame {
 		return currentScreen.run();
 	}
 
-	/**
+    /**
+     * Resumes an existing screen without resetting its game state.
+     */
+    public final int resumeScreen(final Screen screen) {
+        if (screen == null) {
+            throw new IllegalArgumentException(
+                    "Screen cannot be null.");
+        }
+
+        currentScreen = screen;
+        return currentScreen.run();
+    }
+
+
+    /**
 	 * Getter for frame width.
 	 *
 	 * @return Frame width.

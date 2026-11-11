@@ -377,9 +377,40 @@ public final class Core {
                             selectedShip);
 					LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 							+ " infinite game screen at " + FPS + " fps.");
-					runEndless((InfiniteGameScreen) currentScreen, endlessRewards,
-							screen -> frame.setScreen(screen));
-					LOGGER.info("Closing infinite game screen.");
+
+// Keep one Endless screen and one reward subscription
+// across repeated Shop visits.
+                    runEndless((InfiniteGameScreen) currentScreen,
+                            endlessRewards, screen -> {
+
+                                frame.setScreen(screen);
+
+                                while (screen.isShopRequested()) {
+
+                                    // Make earned Run Credits available for purchases.
+                                    resolveRewards(false);
+
+                                    long pauseStarted = System.nanoTime();
+
+                                    // The original game screen remains in memory.
+                                    frame.setScreen(new ShopScreen(
+                                            width, height, FPS, runShopController));
+
+                                    long pausedMillis = Math.max(0L,
+                                            (System.nanoTime() - pauseStarted)
+                                                    / 1_000_000L);
+
+                                    // Apply purchases without creating a new game.
+                                    screen.resumeAfterShop(
+                                            runProgression.getUpgrades(),
+                                            pausedMillis);
+
+                                    // Resume without calling initialize().
+                                    frame.resumeScreen(screen);
+                                }
+                            });
+
+                    LOGGER.info("Closing infinite game screen.");
 					resolveRewards(false);
 
 					gameState = ((InfiniteGameScreen) currentScreen).getGameState();

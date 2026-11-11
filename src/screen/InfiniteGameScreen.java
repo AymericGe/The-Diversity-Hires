@@ -29,6 +29,8 @@ import entity.Bullet;
 import entity.BulletPool;
 import entity.Entity;
 import entity.Ship;
+import entity.BulletType;
+import engine.CampaignUpgrades;
 import entity.ShipType;
 import entity.ZigzagEnemyShip;
 import engine.DifficultyAdjustWhilePlaying;
@@ -65,14 +67,30 @@ public class InfiniteGameScreen extends Screen {
 	private int score;
 	private int lives;
 	/** Lives the player started with. */
-	private final int maxLives;
+    private int maxLives;
     /** Ship selected by the player in Hangar. */
     private final ShipType selectedShipType;
 	/** Total bullets shot by the player. */
 	private int bulletsShot;
 	private int shipsDestroyed;
 	private boolean gameOver;
-	private RunSession runSession;
+
+    /** Whether the player requested the Endless Shop. */
+    private boolean shopRequested;
+
+    /** Prevents opening the Shop repeatedly while holding P. */
+    private boolean shopKeyHeld;
+
+    /** Prevents Esc from abandoning the run after closing Shop. */
+    private boolean ignoreEscapeUntilRelease;
+
+    /** Prevents repeated Rapid Burst switching while holding B. */
+    private boolean rapidBurstKeyHeld;
+
+    /** Upgrades owned during this Endless run. */
+    private CampaignUpgrades activeUpgrades = CampaignUpgrades.none();
+
+    private RunSession runSession;
 	private boolean abandoned;
 	private RecordsService recordsService;
 	private Achievement visibleAchievement;
@@ -174,11 +192,36 @@ public class InfiniteGameScreen extends Screen {
 		DifficultyAdjustWhilePlaying.getInstance().update(this.lives);
 
 		if (this.inputDelay.checkFinished() && !this.gameOver) {
-			if (runSession != null) runSession.startActiveSegment(System.nanoTime());
+
+// Open the Shop once per P key press.
+            boolean shopKeyDown =
+                    inputManager.isKeyDown(KeyEvent.VK_P);
+
+            boolean openShop =
+                    shopKeyDown && !this.shopKeyHeld;
+
+            this.shopKeyHeld = shopKeyDown;
+
+            if (openShop) {
+                this.shopRequested = true;
+                this.isRunning = false;
+                return;
+            }
+
+            if (runSession != null) runSession.startActiveSegment(System.nanoTime());
 			if (runSession != null && recordsService != null)
 				recordsService.activeDuration(runSession.getRunId(), runSession.getActiveDurationMillis(System.nanoTime()));
-			if (inputManager.isKeyDown(KeyEvent.VK_ESCAPE)) {
-				this.abandoned = true;
+
+            boolean escapeDown =
+                    inputManager.isKeyDown(KeyEvent.VK_ESCAPE);
+
+            if (this.ignoreEscapeUntilRelease && !escapeDown) {
+                this.ignoreEscapeUntilRelease = false;
+            }
+
+            if (escapeDown && !this.ignoreEscapeUntilRelease) {
+
+                this.abandoned = true;
 				if (recordsService != null && runSession != null) recordsService.abandonRun(runSession.getRunId());
 				if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
 				// Leaving with Esc plays the same back sound as the menu screens.
@@ -214,7 +257,27 @@ public class InfiniteGameScreen extends Screen {
 		if (this.ship.isDestroyed())
 			return;
 
-		boolean moveRight = inputManager.isKeyDown(
+// Switch between original weapon and purchased Rapid Burst.
+        boolean burstKeyDown =
+                inputManager.isKeyDown(KeyEvent.VK_B);
+
+        if (this.activeUpgrades.hasRapidBurst()
+                && this.selectedShipType != ShipType.SPEEDSTER
+                && burstKeyDown
+                && !this.rapidBurstKeyHeld) {
+
+            BulletType nextType =
+                    this.ship.getCurrentBulletType() == BulletType.RAPID
+                            ? this.selectedShipType.getBulletType()
+                            : BulletType.RAPID;
+
+            this.ship.setBulletType(nextType);
+        }
+
+        this.rapidBurstKeyHeld = burstKeyDown;
+
+
+        boolean moveRight = inputManager.isKeyDown(
 				ControlsConfig.getKey(ControlsConfig.RIGHT));
 		boolean moveLeft = inputManager.isKeyDown(
 				ControlsConfig.getKey(ControlsConfig.LEFT));
@@ -468,7 +531,52 @@ public class InfiniteGameScreen extends Screen {
 		return distanceX < maxDistanceX && distanceY < maxDistanceY;
 	}
 
-	public boolean isAbandoned() { return this.abandoned; }
+    /** Whether the player has requested the Shop. */
+    public final boolean isShopRequested() {
+        return this.shopRequested;
+    }
+
+    /**
+     * Applies purchases and resumes the existing Endless game.
+     * Enemies, bullets, score and current lives are preserved.
+     */
+    public final void resumeAfterShop(
+            final CampaignUpgrades upgrades,
+            final long pausedMillis) {
+
+        if (upgrades == null || pausedMillis < 0) {
+            throw new IllegalArgumentException(
+                    "Invalid Endless Shop resume arguments.");
+        }
+
+        // Preserve time remaining on active cooldowns.
+        this.spawnCooldown.pauseFor(pausedMillis);
+        this.ship.pauseTimers(pausedMillis);
+
+        // Apply permanent-for-this-run combat upgrades.
+        upgrades.initializeShip(this.ship);
+        this.activeUpgrades = upgrades;
+
+        // Increasing maximum HP does not automatically heal damage.
+        this.maxLives =
+                upgrades.getMaxLives(this.selectedShipType);
+
+        // Allow gameplay to continue, not abandon the run.
+        this.shopRequested = false;
+        this.ignoreEscapeUntilRelease = true;
+
+        // Restore gameplay music.
+        if (this.lives <= 1) {
+            AudioManager.playBGM(
+                    "audio/bgm/music_game_urgent.wav");
+        } else {
+            AudioManager.playBGM(
+                    "audio/bgm/music_game.wav");
+        }
+    }
+
+
+    public boolean isAbandoned() { return this.abandoned; }
 
 	public final GameState getGameState() {
 		return new GameState(1, this.score, this.lives, this.bulletsShot,
