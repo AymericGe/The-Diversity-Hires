@@ -9,7 +9,44 @@ import java.util.Collections;
 import java.util.List;
 
 public final class ShopProducts {
+
+    public static final String RAPID_BURST_ID =
+            "ability.rapid_burst";
+
     private ShopProducts() { }
+
+    /**
+     * Products purchased using permanent Account Credits.
+     */
+    public static List<ShopProduct> accountProducts() {
+        List<ShopProduct> products = new ArrayList<ShopProduct>();
+
+        for (ShopProduct product : availableProducts()) {
+            if (product.getShipType() != null) {
+                products.add(product);
+            }
+        }
+
+        return Collections.unmodifiableList(products);
+    }
+
+    /**
+     * Temporary combat upgrades purchased using Run Credits.
+     */
+    public static List<ShopProduct> runProducts() {
+        List<ShopProduct> products = new ArrayList<ShopProduct>();
+
+        for (ShopProduct product : availableProducts()) {
+            if (PermanentUpgrade.forProduct(product.getId()) != null
+                    || RAPID_BURST_ID.equals(product.getId())) {
+
+                products.add(product);
+            }
+        }
+
+        return Collections.unmodifiableList(products);
+    }
+
 
     public static List<ShopProduct> availableProducts() {
         List<ShopProduct> products = new ArrayList<ShopProduct>();
@@ -22,10 +59,20 @@ public final class ShopProducts {
             }
         }
         for (ShipType ship : ShipType.values()) {
-            boolean available = ship != ShipType.SPEEDSTER;
-            products.add(ShopProduct.ship(ship, available, available ? 0 : 200));
-        }
-        return Collections.unmodifiableList(products);
+    boolean available = ship != ShipType.SPEEDSTER;
+    products.add(ShopProduct.ship(ship, available, available ? 0 : 200));
+}
+
+// Cross-Ship Upgrade: Rapid Burst
+products.add(new ShopProduct(
+        RAPID_BURST_ID,
+        "Rapid Burst",
+        Category.UNLOCKABLE,
+        250,
+        "Unlock Speedster burst for other ships."
+));
+
+return Collections.unmodifiableList(products);
     }
 
     /** Keep one card per upgrade, advancing it only after a completed purchase. */
