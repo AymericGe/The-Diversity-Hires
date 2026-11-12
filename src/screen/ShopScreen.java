@@ -37,7 +37,6 @@ public class ShopScreen extends Screen {
     private boolean backHeld;
     private boolean retryHeld;
     private final LifeRefillOffer lifeRefillOffer;
-    private boolean lifeKeyHeld;
     private String lifeFeedback;
     private boolean lifePurchaseSucceeded;
 
@@ -62,16 +61,40 @@ public class ShopScreen extends Screen {
     }
 
 
+
+
     private void refreshProducts() {
         upgrades.clear();
         unlocks.clear();
+
         for (ShopProduct product : controller.getProducts()) {
-            if (product.getCategory() == Category.UPGRADE) upgrades.add(product);
-            else unlocks.add(product);
+            if (product.getCategory() == Category.UPGRADE) {
+                upgrades.add(product);
+            } else {
+                unlocks.add(product);
+            }
         }
-        upgradeIndex = Math.max(0, Math.min(upgradeIndex, upgrades.size() - 1));
-        unlockIndex = Math.max(0, Math.min(unlockIndex, unlocks.size() - 1));
+
+        // Show Life Refill after Hull 3/3.
+        if (lifeRefillOffer != null
+                && lifeRefillOffer.isUnlocked()) {
+            upgrades.add(new ShopProduct(
+                    LifeRefillOffer.PRODUCT_ID,
+                    "Life Refill",
+                    Category.UPGRADE,
+                    RunLifePurchases.LIFE_PRICE,
+                    "Restore one lost HP."));
+        }
+
+        upgradeIndex = Math.max(
+                0, Math.min(upgradeIndex, upgrades.size() - 1));
+
+        unlockIndex = Math.max(
+                0, Math.min(unlockIndex, unlocks.size() - 1));
     }
+
+
+
 
     private static int validateArguments(int width, int height, int fps, ShopController controller) {
         if (width <= 0 || height <= 0 || fps <= 0 || controller == null) {
@@ -120,9 +143,6 @@ public class ShopScreen extends Screen {
         boolean confirm = inputManager.isKeyDown(KeyEvent.VK_SPACE) || inputManager.isKeyDown(KeyEvent.VK_ENTER);
         boolean back = inputManager.isKeyDown(KeyEvent.VK_ESCAPE);
         boolean retry = inputManager.isKeyDown(KeyEvent.VK_R);
-        boolean life = inputManager.isKeyDown(KeyEvent.VK_L);
-        boolean lifePressed = life && !lifeKeyHeld;
-        lifeKeyHeld = life;
         boolean moveUp = up && !upHeld;
         boolean moveDown = down && !downHeld;
         boolean moveLeft = left && !leftHeld;
@@ -144,8 +164,6 @@ public class ShopScreen extends Screen {
         if (controller.getSaveStatus() != SaveStatus.FAILED) selectedAction = 0;
         if (leave) {
             leaveShop();
-        } else if (lifePressed && lifeRefillOffer != null) {
-            buyLife();
         } else if (moveUp || moveDown) {
             moveSection(moveUp ? -1 : 1);
             AudioManager.playSFX("audio/sfx/menu_move.wav");
@@ -181,24 +199,49 @@ public class ShopScreen extends Screen {
         }
     }
 
+
     private void buySelectedProduct() {
         lifeFeedback = null;
-        ShopProduct product = selectedSection == 0 ? upgrades.get(upgradeIndex) : unlocks.get(unlockIndex);
-        lastProductAvailableByDefault = product.isAvailableByDefault();
-        // Refresh before the ownership check in case another game-loop action changed assets.
+
+        // First, get the selected product.
+        ShopProduct product = selectedSection == 0
+                ? upgrades.get(upgradeIndex)
+                : unlocks.get(unlockIndex);
+
+        // Life Refill is a repeatable purchase.
+        if (lifeRefillOffer != null
+                && LifeRefillOffer.PRODUCT_ID.equals(product.getId())) {
+            buyLife();
+            return;
+        }
+
+        lastProductAvailableByDefault =
+                product.isAvailableByDefault();
+
         assets = controller.snapshot();
+
         if (assets.getUnlockedContentIds().contains(product.getId())) {
             lastResult = PurchaseResult.ALREADY_UNLOCKED;
         } else {
             lastResult = controller.purchase(product.getId());
         }
+
+        // Fill new Hull slots with actual HP.
+        if (lastResult == PurchaseResult.SUCCESS
+                && lifeRefillOffer != null) {
+            lifeRefillOffer.fillPurchasedHullSlots();
+        }
+
         assets = controller.snapshot();
         refreshProducts();
 
-        if (lastProductAvailableByDefault || lastResult == PurchaseResult.SUCCESS) {
-            AudioManager.playSFX("audio/sfx/shop_successful_purchase.wav");
+        if (lastProductAvailableByDefault
+                || lastResult == PurchaseResult.SUCCESS) {
+            AudioManager.playSFX(
+                    "audio/sfx/shop_successful_purchase.wav");
         } else {
-            AudioManager.playSFX("audio/sfx/shop_purchase_failure.wav");
+            AudioManager.playSFX(
+                    "audio/sfx/shop_purchase_failure.wav");
         }
     }
 
@@ -241,48 +284,59 @@ public class ShopScreen extends Screen {
         isRunning = false;
     }
 
-    protected void draw() {
-        drawManager.initDrawing(this);
 
-        drawManager.drawShop(
+protected void draw() {
+    drawManager.initDrawing(this);
+
+    drawManager.drawShop(
+            this,
+            upgrades,
+            unlocks,
+            assets,
+            selectedSection,
+            upgradeIndex,
+            unlockIndex,
+            selectedAction,
+            lifeFeedback != null
+                    ? lifeFeedback
+                    : lastProductAvailableByDefault
+                    ? "Available in Hangar. No purchase needed."
+                    : resultMessage(lastResult),
+            lifeFeedback != null
+                    ? lifePurchaseSucceeded
+                    : lastProductAvailableByDefault
+                    || lastResult == PurchaseResult.SUCCESS,
+            controller.getSaveStatus());
+
+    if (lifeRefillOffer != null) {
+        drawManager.drawShopLifeRefill(
                 this,
-                upgrades,
-                unlocks,
-                assets,
-                selectedSection,
-                upgradeIndex,
-                unlockIndex,
-                selectedAction,
-                lifeFeedback != null
-                        ? lifeFeedback
-                        : lastProductAvailableByDefault
-                        ? "Available in Hangar. No purchase needed."
-                        : resultMessage(lastResult),
-                lifeFeedback != null
-                        ? lifePurchaseSucceeded
-                        : lastProductAvailableByDefault
-                        || lastResult == PurchaseResult.SUCCESS,
-                controller.getSaveStatus());
-
-        if (lifeRefillOffer != null) {
-            drawManager.drawShopLifeRefill(
-                    this,
-                    lifeRefillOffer.getStatusLine());
-        }
-
-        drawManager.completeDrawing(this);
+                lifeRefillOffer.getStatusLine());
     }
 
-    static String resultMessage(PurchaseResult result) {
-        if (result == null) return "";
-        switch (result) {
-        case SUCCESS: return "Purchase complete.";
-        case INSUFFICIENT_FUNDS: return "Not enough credits.";
-        case ALREADY_UNLOCKED: return "Already owned. No credits spent.";
-        case INVALID_ITEM_ID: return "Invalid product. Nothing purchased.";
-        case CATEGORY_MISMATCH: return "Unknown product or wrong category.";
-        case ITEM_NOT_AVAILABLE: return "This product is unavailable.";
-        default: return "Purchase could not be completed.";
-        }
+    drawManager.completeDrawing(this);
+}
+
+static String resultMessage(PurchaseResult result) {
+    if (result == null) {
+        return "";
     }
+
+    switch (result) {
+        case SUCCESS:
+            return "Purchase complete.";
+        case INSUFFICIENT_FUNDS:
+            return "Not enough credits.";
+        case ALREADY_UNLOCKED:
+            return "Already owned. No credits spent.";
+        case INVALID_ITEM_ID:
+            return "Invalid product. Nothing purchased.";
+        case CATEGORY_MISMATCH:
+            return "Unknown product or wrong category.";
+        case ITEM_NOT_AVAILABLE:
+            return "This product is unavailable.";
+        default:
+            return "Purchase could not be completed.";
+    }
+}
 }

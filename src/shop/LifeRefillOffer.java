@@ -12,6 +12,7 @@ import java.util.function.LongSupplier;
  * Connects life purchases to the current game's HP.
  */
 public final class LifeRefillOffer {
+    public static final String PRODUCT_ID = "run.life_refill";
 
     private final RunLifePurchases purchases;
     private final PlayerAssets assets;
@@ -19,6 +20,7 @@ public final class LifeRefillOffer {
     private final IntSupplier maxHp;
     private final LongSupplier activeTime;
     private final Runnable restoreLife;
+    private int knownMaxHp;
 
     public LifeRefillOffer(
             RunLifePurchases purchases,
@@ -34,7 +36,35 @@ public final class LifeRefillOffer {
         this.maxHp = Objects.requireNonNull(maxHp);
         this.activeTime = Objects.requireNonNull(activeTime);
         this.restoreLife = Objects.requireNonNull(restoreLife);
+        this.knownMaxHp = maxHp.getAsInt();
     }
+
+    public boolean isUnlocked() {
+        return PermanentUpgrade.HULL.getLevel(
+                assets.snapshot())
+                == PermanentUpgrade.HULL.getMaxLevel();
+    }
+
+    /**
+     * Fill newly purchased Hull slots with actual HP.
+     * Existing missing HP is not restored.
+     */
+    public void fillPurchasedHullSlots() {
+        int newMaxHp = maxHp.getAsInt();
+        int gainedSlots = Math.max(
+                0, newMaxHp - knownMaxHp);
+
+        for (int i = 0; i < gainedSlots; i++) {
+            if (currentHp.getAsInt() >= newMaxHp) {
+                break;
+            }
+
+            restoreLife.run();
+        }
+
+        knownMaxHp = newMaxHp;
+    }
+
 
     public RunLifePurchases.Result buyLife() {
         RunLifePurchases.Result result = purchases.tryBuy(
@@ -57,7 +87,7 @@ public final class LifeRefillOffer {
                 assets.snapshot());
 
         if (hull < PermanentUpgrade.HULL.getMaxLevel()) {
-            return "L: Life Refill | Requires Hull 3/3";
+            return "Life Refill | Requires Hull 3/3";
         }
 
         long cooldown =
@@ -72,7 +102,7 @@ public final class LifeRefillOffer {
         int available =
                 purchases.getAvailablePurchases(time);
 
-        return "L: +1 HP | "
+        return "Life Refill | "
                 + RunLifePurchases.LIFE_PRICE
                 + " C | HP "
                 + currentHp.getAsInt()

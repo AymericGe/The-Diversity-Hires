@@ -402,6 +402,9 @@ public class InfiniteGameScreen extends Screen {
 			drawManager.drawHorizontalLine(this,
 					this.height / 2 + this.height / 12);
 		}
+        if (!this.gameOver && this.inputDelay.checkFinished()) {
+            drawManager.drawEndlessShopHint(this);
+        }
 		drawManager.completeDrawing(this);
 	}
 
