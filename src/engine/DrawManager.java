@@ -39,6 +39,7 @@ import vfx.Icon;
 import vfx.RankBadge;
 import vfx.ShipSprites;
 import screen.GameModeScreen;
+import shop.LifeRefillOffer;
 
 /**
  * Manages screen drawing.
@@ -1066,6 +1067,36 @@ public final class DrawManager {
         drawShopCentered(screen, "WASD also works   Space/Enter: confirm", height - 21);
     }
 
+    /** Shows the Shop shortcut during Endless gameplay. */
+    public void drawEndlessShopHint(final Screen screen) {
+        drawShopText(
+                "P - Open Shop",
+                screen.getWidth() - 130,
+                screen.getHeight() - 16,
+                11,
+                Color.CYAN,
+                122);
+    }
+
+
+
+    /**
+     * Displays the consumable life-refill option
+     * in the Run Shop.
+     */
+    public void drawShopLifeRefill(
+            final Screen screen,
+            final String status) {
+
+        backBufferGraphics.setColor(Color.CYAN);
+
+        drawShopCentered(
+                screen,
+                status,
+                screen.getHeight() - 120);
+    }
+
+
     private void drawShopShelf(Screen screen, List<ShopProduct> products, PlayerAssetsState assets,
             String heading, String emptyText, int top, int size, int index, boolean active) {
         int width = screen.getWidth();
@@ -1118,6 +1149,14 @@ public final class DrawManager {
     }
 
     private void drawShopProductIcon(ShopProduct product, int centerX, int y) {
+        if (LifeRefillOffer.PRODUCT_ID.equals(product.getId())) {
+            drawIcon(
+                    Icon.LIFE,
+                    centerX - Icon.LIFE.getWidth(),
+                    y + 2,
+                    2);
+            return;
+        }
         if (product.getShipType() != null) {
             boolean[][] sprite = ShipSprites.forType(product.getShipType());
             backBufferGraphics.setColor(Color.WHITE);
