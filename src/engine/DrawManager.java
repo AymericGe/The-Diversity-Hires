@@ -1066,6 +1066,23 @@ public final class DrawManager {
         drawShopCentered(screen, "WASD also works   Space/Enter: confirm", height - 21);
     }
 
+    /**
+     * Displays the consumable life-refill option
+     * in the Run Shop.
+     */
+    public void drawShopLifeRefill(
+            final Screen screen,
+            final String status) {
+
+        backBufferGraphics.setColor(Color.CYAN);
+
+        drawShopCentered(
+                screen,
+                status,
+                screen.getHeight() - 120);
+    }
+
+
     private void drawShopShelf(Screen screen, List<ShopProduct> products, PlayerAssetsState assets,
             String heading, String emptyText, int top, int size, int index, boolean active) {
         int width = screen.getWidth();
