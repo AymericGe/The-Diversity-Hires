@@ -45,7 +45,8 @@ import shop.ShopController;
 import shop.ShopProduct;
 import shop.ShopProducts;
 import java.util.List;
-
+import currency.RunLifePurchases;
+import shop.LifeRefillOffer;
 /**
  * Implements core game logic.
  *
@@ -188,6 +189,9 @@ public final class Core {
 
 // Each new Campaign starts with fresh progression.
                 startRunProgression();
+                final RunLifePurchases campaignLifePurchases =
+                        new RunLifePurchases(
+                                RunLifePurchases.Mode.CAMPAIGN);
 
                 CampaignUpgrades campaignUpgrades =
                         runProgression.getUpgrades();
@@ -241,11 +245,43 @@ public final class Core {
                             LOGGER.info("Opening Shop after Stage "
                                     + gameState.getLevel());
 
-                            currentScreen = new ShopScreen(
-                                    width, height, FPS, runShopController);
 
-                            // Wait until the player leaves the Shop.
+// HP restored in this Shop must carry over
+// to the next Campaign stage.
+                            final int[] purchasedLives = {
+                                    gameState.getLivesRemaining()
+                            };
+
+                            final ShipType shopShipType = selectedShip;
+
+                            LifeRefillOffer campaignLifeOffer =
+                                    new LifeRefillOffer(
+                                            campaignLifePurchases,
+                                            runProgression.getAssets(),
+                                            () -> purchasedLives[0],
+                                            () -> runProgression.getUpgrades()
+                                                    .getMaxLives(shopShipType),
+                                            () -> runSession.getActiveDurationMillis(
+                                                    System.nanoTime()),
+                                            () -> purchasedLives[0]++);
+
+                            currentScreen = new ShopScreen(
+                                    width,
+                                    height,
+                                    FPS,
+                                    runShopController,
+                                    campaignLifeOffer);
+
                             frame.setScreen(currentScreen);
+
+// Carry the purchased HP into the next stage.
+                            gameState = new GameState(
+                                    gameState.getLevel(),
+                                    gameState.getScore(),
+                                    purchasedLives[0],
+                                    gameState.getBulletsShot(),
+                                    gameState.getShipsDestroyed());
+
 
                             // Retry any pending rewards after purchases.
                             resolveRewards(false);
@@ -359,6 +395,13 @@ public final class Core {
 					// Infinite mode & score.
                     // New Endless run starts with fresh temporary progression.
                     startRunProgression();
+
+                    final RunLifePurchases endlessLifePurchases =
+                            new RunLifePurchases(
+                                    RunLifePurchases.Mode.ENDLESS);
+
+                    final ShipType endlessLifeShip = selectedShip;
+
                     // Start Endless with the selected ship's base health.
                     gameState = new GameState(
                             1,
@@ -393,8 +436,27 @@ public final class Core {
                                     long pauseStarted = System.nanoTime();
 
                                     // The original game screen remains in memory.
+
+                                    LifeRefillOffer endlessLifeOffer =
+                                            new LifeRefillOffer(
+                                                    endlessLifePurchases,
+                                                    runProgression.getAssets(),
+                                                    screen::getCurrentLives,
+                                                    () -> runProgression.getUpgrades()
+                                                            .getMaxLives(endlessLifeShip),
+                                                    () -> infiniteSession.getActiveDurationMillis(
+                                                            System.nanoTime()),
+                                                    () -> screen.restorePurchasedLife(
+                                                            runProgression.getUpgrades()
+                                                                    .getMaxLives(endlessLifeShip)));
+
                                     frame.setScreen(new ShopScreen(
-                                            width, height, FPS, runShopController));
+                                            width,
+                                            height,
+                                            FPS,
+                                            runShopController,
+                                            endlessLifeOffer));
+
 
                                     long pausedMillis = Math.max(0L,
                                             (System.nanoTime() - pauseStarted)

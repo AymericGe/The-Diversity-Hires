@@ -10,6 +10,8 @@ import java.util.List;
 import shop.ShopController;
 import shop.ShopController.SaveStatus;
 import shop.ShopProduct;
+import currency.RunLifePurchases;
+import shop.LifeRefillOffer;
 
 /** Displays products using the shared session controller. */
 public class ShopScreen extends Screen {
@@ -34,13 +36,31 @@ public class ShopScreen extends Screen {
     private boolean confirmHeld;
     private boolean backHeld;
     private boolean retryHeld;
+    private final LifeRefillOffer lifeRefillOffer;
+    private boolean lifeKeyHeld;
+    private String lifeFeedback;
+    private boolean lifePurchaseSucceeded;
 
-    public ShopScreen(int width, int height, int fps, ShopController controller) {
-        super(validateArguments(width, height, fps, controller), height, fps);
+
+    public ShopScreen(int width, int height, int fps,
+                      ShopController controller) {
+        this(width, height, fps, controller, null);
+    }
+
+    public ShopScreen(int width, int height, int fps,
+                      ShopController controller,
+                      LifeRefillOffer lifeRefillOffer) {
+
+        super(validateArguments(
+                width, height, fps, controller), height, fps);
+
         this.controller = controller;
+        this.lifeRefillOffer = lifeRefillOffer;
+
         refreshProducts();
         this.returnCode = RETURN_TO_MAIN_MENU;
     }
+
 
     private void refreshProducts() {
         upgrades.clear();
@@ -100,6 +120,9 @@ public class ShopScreen extends Screen {
         boolean confirm = inputManager.isKeyDown(KeyEvent.VK_SPACE) || inputManager.isKeyDown(KeyEvent.VK_ENTER);
         boolean back = inputManager.isKeyDown(KeyEvent.VK_ESCAPE);
         boolean retry = inputManager.isKeyDown(KeyEvent.VK_R);
+        boolean life = inputManager.isKeyDown(KeyEvent.VK_L);
+        boolean lifePressed = life && !lifeKeyHeld;
+        lifeKeyHeld = life;
         boolean moveUp = up && !upHeld;
         boolean moveDown = down && !downHeld;
         boolean moveLeft = left && !leftHeld;
@@ -121,6 +144,8 @@ public class ShopScreen extends Screen {
         if (controller.getSaveStatus() != SaveStatus.FAILED) selectedAction = 0;
         if (leave) {
             leaveShop();
+        } else if (lifePressed && lifeRefillOffer != null) {
+            buyLife();
         } else if (moveUp || moveDown) {
             moveSection(moveUp ? -1 : 1);
             AudioManager.playSFX("audio/sfx/menu_move.wav");
@@ -157,6 +182,7 @@ public class ShopScreen extends Screen {
     }
 
     private void buySelectedProduct() {
+        lifeFeedback = null;
         ShopProduct product = selectedSection == 0 ? upgrades.get(upgradeIndex) : unlocks.get(unlockIndex);
         lastProductAvailableByDefault = product.isAvailableByDefault();
         // Refresh before the ownership check in case another game-loop action changed assets.
@@ -176,6 +202,32 @@ public class ShopScreen extends Screen {
         }
     }
 
+    private void buyLife() {
+        RunLifePurchases.Result result =
+                lifeRefillOffer.buyLife();
+
+        lifePurchaseSucceeded =
+                result == RunLifePurchases.Result.SUCCESS;
+
+        lifeFeedback = switch (result) {
+            case SUCCESS -> "Life restored! +1 HP";
+            case HULL_NOT_MAXED -> "Upgrade Hull to 3/3 first.";
+            case FULL_HEALTH -> "HP is already full.";
+            case NOT_ALIVE -> "Cannot buy after Game Over.";
+            case INSUFFICIENT_FUNDS -> "Not enough Run Credits.";
+            case LIMIT_REACHED -> "Life purchase limit reached.";
+            case COOLDOWN_ACTIVE -> "Life refill is cooling down.";
+        };
+
+        assets = controller.snapshot();
+
+        AudioManager.playSFX(
+                lifePurchaseSucceeded
+                        ? "audio/sfx/shop_successful_purchase.wav"
+                        : "audio/sfx/shop_purchase_failure.wav");
+    }
+
+
     private void retrySave() {
         controller.retrySave();
         assets = controller.snapshot();
@@ -191,11 +243,33 @@ public class ShopScreen extends Screen {
 
     protected void draw() {
         drawManager.initDrawing(this);
-        drawManager.drawShop(this, upgrades, unlocks, assets, selectedSection,
-                upgradeIndex, unlockIndex, selectedAction,
-                lastProductAvailableByDefault ? "Available in Hangar. No purchase needed." : resultMessage(lastResult),
-                lastProductAvailableByDefault || lastResult == PurchaseResult.SUCCESS,
+
+        drawManager.drawShop(
+                this,
+                upgrades,
+                unlocks,
+                assets,
+                selectedSection,
+                upgradeIndex,
+                unlockIndex,
+                selectedAction,
+                lifeFeedback != null
+                        ? lifeFeedback
+                        : lastProductAvailableByDefault
+                        ? "Available in Hangar. No purchase needed."
+                        : resultMessage(lastResult),
+                lifeFeedback != null
+                        ? lifePurchaseSucceeded
+                        : lastProductAvailableByDefault
+                        || lastResult == PurchaseResult.SUCCESS,
                 controller.getSaveStatus());
+
+        if (lifeRefillOffer != null) {
+            drawManager.drawShopLifeRefill(
+                    this,
+                    lifeRefillOffer.getStatusLine());
+        }
+
         drawManager.completeDrawing(this);
     }
 

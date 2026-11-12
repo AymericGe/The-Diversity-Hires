@@ -85,7 +85,7 @@ class EndlessRewardIntegrationTest {
             killEnemy(current);
             assertEquals(1, current.getGameState().getShipsDestroyed());
             assertTrue(current.getGameState().getScore() > 1, "Currency is not the score.");
-            assertEquals(201, Core.getAssetHudSnapshot().getCredits());
+            assertEquals(210, Core.getAssetHudSnapshot().getCredits());
             assertEquals(200, before.getCredits());
             assertEquals(200, assets.getBalance());
             assertFalse(Files.exists(save), "HUD reads do not settle or save live kills.");
@@ -94,13 +94,13 @@ class EndlessRewardIntegrationTest {
                     ship.getPositionX() + 4, ship.getPositionY() + 4, 4, Bullet.Owner.ENEMY));
             call(current, "manageCollisions");
             assertEquals(0, current.getGameState().getLivesRemaining());
-            assertEquals(1, endless.getPendingCurrency());
+            assertEquals(10, endless.getPendingCurrency());
         });
-        assertEquals(201, assets.getBalance());
+        assertEquals(210, assets.getBalance());
         assertEquals(0, endless.getPendingCurrency());
-        assertEquals(201, files.loadPlayerAssets(save).getBalance());
+        assertEquals(210, files.loadPlayerAssets(save).getBalance());
         game.getGameplayEvents().publish(new EnemyDefeatedEvent("endless", "late"));
-        assertEquals(201, Core.getAssetHudSnapshot().getCredits());
+        assertEquals(210, Core.getAssetHudSnapshot().getCredits());
     }
 
     @Test
@@ -120,7 +120,7 @@ class EndlessRewardIntegrationTest {
             assertTrue(current.isAbandoned());
             assertEquals(Boolean.FALSE, get(current, "isRunning"));
         });
-        assertEquals(201, files.loadPlayerAssets(save).getBalance());
+        assertEquals(210, files.loadPlayerAssets(save).getBalance());
         assertEquals(0, endless.getPendingCurrency());
     }
 
@@ -133,7 +133,7 @@ class EndlessRewardIntegrationTest {
             throw new IllegalStateException("screen stopped");
         }));
         game.getGameplayEvents().publish(new EnemyDefeatedEvent("interrupted", "late"));
-        assertEquals(201, files.loadPlayerAssets(save).getBalance());
+        assertEquals(210, files.loadPlayerAssets(save).getBalance());
         assertEquals(0, endless.getPendingCurrency());
     }
 
@@ -163,14 +163,14 @@ class EndlessRewardIntegrationTest {
             killEnemy(current);
         });
         assertEquals(PurchaseResult.SUCCESS, shop.purchase(PermanentUpgrade.HULL.getProductId(1)));
-        assertEquals(101, Core.getAssetHudSnapshot().getCredits());
+        assertEquals(110, Core.getAssetHudSnapshot().getCredits());
         PlayerAssets restored = new PlayerAssets();
         assertTrue(restored.restore(files.loadPlayerAssets(save)));
         swapCore("shopController", ShopTestFixtures.upgradeController(restored,
                 new ShopTestFixtures.SaveFile(files, save)));
         swapCore("campaignRewards", new CampaignRewards(restored, files, save));
         swapCore("endlessRewards", new EndlessRewards(restored, files, save));
-        assertEquals(101, Core.getAssetHudSnapshot().getCredits());
+        assertEquals(110, Core.getAssetHudSnapshot().getCredits());
         assertTrue(restored.isUnlocked(PermanentUpgrade.HULL.getProductId(1)));
     }
 
@@ -189,10 +189,10 @@ class EndlessRewardIntegrationTest {
         });
         assertEquals(SettlementResult.SAVE_FAILED, campaign.getLastResult());
         assertEquals(SettlementResult.SAVE_FAILED, endless.getLastResult());
-        assertEquals(211, assets.getBalance());
+        assertEquals(220, assets.getBalance());
         assertEquals(PurchaseResult.SUCCESS, shop.purchase(PermanentUpgrade.HULL.getProductId(1)));
         assertEquals(SettlementResult.SAVE_FAILED, Core.retryRewards(campaign, endless));
-        assertEquals(111, Core.getAssetHudSnapshot().getCredits());
+        assertEquals(120, Core.getAssetHudSnapshot().getCredits());
         assertEquals(0, campaign.getPendingCurrency());
         assertEquals(0, endless.getPendingCurrency());
         Files.delete(blocker);
@@ -200,7 +200,7 @@ class EndlessRewardIntegrationTest {
         assertEquals(SettlementResult.SUCCESS, Core.retryRewards(campaign, endless));
         assertEquals(SettlementResult.SUCCESS, Core.retryRewards(campaign, endless));
         PlayerAssetsState saved = files.loadPlayerAssets(save);
-        assertEquals(111, saved.getBalance());
+        assertEquals(120, saved.getBalance());
         assertTrue(saved.getUnlockedContentIds().contains(PermanentUpgrade.HULL.getProductId(1)));
     }
 
@@ -216,17 +216,17 @@ class EndlessRewardIntegrationTest {
             current.getGameplayEvents().publish(new EnemyDefeatedEvent("endless", "one"));
             current.getGameplayEvents().publish(new EnemyDefeatedEvent("endless", "one"));
         });
-        assertEquals((long) Integer.MAX_VALUE + 11, Core.getAssetHudSnapshot().getCredits());
+        assertEquals((long) Integer.MAX_VALUE + 20, Core.getAssetHudSnapshot().getCredits());
         assertEquals(10, campaign.getPendingCurrency());
-        assertEquals(1, endless.getPendingCurrency());
+        assertEquals(10, endless.getPendingCurrency());
         assertEquals(SettlementResult.SETTLEMENT_FAILED, Core.retryRewards(campaign, endless));
         assertEquals(PurchaseResult.SUCCESS, shop.purchase(PermanentUpgrade.HULL.getProductId(1)));
         assertEquals(SettlementResult.SUCCESS, Core.retryRewards(campaign, endless));
         assertEquals(SettlementResult.SUCCESS, Core.retryRewards(campaign, endless));
         assertEquals(0, campaign.getPendingCurrency());
         assertEquals(0, endless.getPendingCurrency());
-        assertEquals(Integer.MAX_VALUE - 89, Core.getAssetHudSnapshot().getCredits());
-        assertEquals(Integer.MAX_VALUE - 89, files.loadPlayerAssets(save).getBalance());
+        assertEquals(Integer.MAX_VALUE - 80, Core.getAssetHudSnapshot().getCredits());
+        assertEquals(Integer.MAX_VALUE - 80, files.loadPlayerAssets(save).getBalance());
     }
 
     private static void killEnemy(InfiniteGameScreen screen) {

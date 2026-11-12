@@ -12,7 +12,7 @@ import java.util.Set;
 
 /** Fixed Endless kill rewards for one application session, on the gameplay thread. */
 final class EndlessRewards {
-    static final int CREDITS_PER_DEFEAT = 1;
+    static final int CREDITS_PER_DEFEAT = 10;
     private static final String DEFEAT_REWARD = "ENDLESS_DEFEAT";
     private static final String QUEUED_REWARD = "ENDLESS_QUEUED";
     private final RewardSystem rewards;

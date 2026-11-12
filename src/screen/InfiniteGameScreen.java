@@ -575,6 +575,31 @@ public class InfiniteGameScreen extends Screen {
         }
     }
 
+    /** Current HP of the Endless player. */
+    public final int getCurrentLives() {
+        return this.lives;
+    }
+
+    /**
+     * Restores one purchased life without resetting the run.
+     */
+    public final void restorePurchasedLife(
+            final int upgradedMaxLives) {
+
+        if (upgradedMaxLives < 1) {
+            throw new IllegalArgumentException(
+                    "Maximum lives must be positive.");
+        }
+
+        this.maxLives = Math.max(
+                this.maxLives, upgradedMaxLives);
+
+        if (this.lives > 0 && this.lives < this.maxLives) {
+            this.lives++;
+        }
+    }
+
+
 
     public boolean isAbandoned() { return this.abandoned; }
 
