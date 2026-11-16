@@ -1,5 +1,6 @@
 package vfx;
 
+import engine.GameClock;
 import java.awt.Color;
 
 /**
@@ -27,7 +28,7 @@ public class Particle {
 		this.color = color;
 		this.size = size;
 		this.lifetimeMs = lifetimeMs;
-		this.birthTime = System.currentTimeMillis();
+		this.birthTime = GameClock.currentTimeMillis();
 	}
 
 	/** Moves the particle one frame. */
@@ -38,7 +39,7 @@ public class Particle {
 
 	/** @return true once the particle has lived longer than its lifetime. */
 	public boolean isExpired() {
-		return System.currentTimeMillis() - this.birthTime >= this.lifetimeMs;
+		return GameClock.currentTimeMillis() - this.birthTime >= this.lifetimeMs;
 	}
 
 	public int getX() { return (int) this.x; }

@@ -70,7 +70,7 @@ public class Cooldown {
 	 */
 	public final boolean checkFinished() {
 		if ((this.time == 0)
-				|| this.time + this.duration < System.currentTimeMillis())
+				|| this.time + this.duration < GameClock.currentTimeMillis())
 			return true;
 		return false;
 	}
@@ -104,7 +104,7 @@ public class Cooldown {
 	 * Restarts the cooldown.
 	 */
 	public final void reset() {
-		this.time = System.currentTimeMillis();
+		this.time = GameClock.currentTimeMillis();
 		if (this.variance != 0)
 			this.duration = calculateDuration(this.milliseconds, this.variance,
 					Math.random());

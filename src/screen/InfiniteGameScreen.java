@@ -79,6 +79,8 @@ public class InfiniteGameScreen extends Screen {
 	private ParticleSystem particleSystem;
 	private long gameStartTime;
 	private int lastCountdown = -1;
+	/** Pause menu; P opens it during play (Esc still leaves the run). */
+	private final PauseMenu pauseMenu = new PauseMenu();
 
 	public InfiniteGameScreen(final GameState gameState, final int width,
 			final int height, final int fps) {
@@ -126,7 +128,11 @@ public class InfiniteGameScreen extends Screen {
 
 	public final int run() {
 		try { super.run(); }
-		finally { if (runSession != null) runSession.stopActiveSegment(System.nanoTime()); }
+		finally {
+			// Never leave the gameplay clock stopped for the next screen.
+			this.pauseMenu.close(null);
+			if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
+		}
 
 		this.logger.info("Infinite mode ended with a score of " + this.score);
 		return this.returnCode;
@@ -134,6 +140,9 @@ public class InfiniteGameScreen extends Screen {
 
 	protected final void update() {
 		super.update();
+		// While paused, only the pause menu runs; the game stays frozen.
+		if (updatePause())
+			return;
 		if (this.recordsService != null) {
 			long now = System.currentTimeMillis();
 			if (this.visibleAchievement == null || now >= this.achievementNoticeUntil) {
@@ -153,13 +162,9 @@ public class InfiniteGameScreen extends Screen {
 			if (runSession != null) runSession.startActiveSegment(System.nanoTime());
 			if (runSession != null && recordsService != null)
 				recordsService.activeDuration(runSession.getRunId(), runSession.getActiveDurationMillis(System.nanoTime()));
-			if (inputManager.isKeyDown(KeyEvent.VK_ESCAPE)) {
-				this.abandoned = true;
-				if (recordsService != null && runSession != null) recordsService.abandonRun(runSession.getRunId());
-				if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
-				// Leaving with Esc plays the same back sound as the menu screens.
-				AudioManager.playSFX("audio/sfx/menu_back.wav");
-				this.isRunning = false;
+			if (inputManager.isKeyDown(KeyEvent.VK_ESCAPE)
+					&& this.pauseMenu.isEscapeFree(inputManager)) {
+				abandonRun();
 				return;
 			}
 
@@ -184,6 +189,66 @@ public class InfiniteGameScreen extends Screen {
 
 		if (this.gameOver && this.screenFinishedCooldown.checkFinished())
 			this.isRunning = false;
+	}
+
+	/** Leaves the run early; it counts as abandoned for the records. */
+	private void abandonRun() {
+		this.abandoned = true;
+		if (recordsService != null && runSession != null) recordsService.abandonRun(runSession.getRunId());
+		if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
+		// Leaving plays the same back sound as the menu screens.
+		AudioManager.playSFX("audio/sfx/menu_back.wav");
+		this.isRunning = false;
+	}
+
+	/**
+	 * Opens, runs and closes the pause menu. P opens it during play; P or
+	 * Esc closes it. Esc outside the menu still leaves the run, as before.
+	 * While paused the gameplay clock is stopped.
+	 *
+	 * @return True if the game is paused (or was just quit) this frame, so
+	 *         the rest of the update must be skipped.
+	 */
+	private boolean updatePause() {
+		boolean togglePressed = this.pauseMenu.pollToggle(inputManager, false);
+
+		if (!this.pauseMenu.isOpen()) {
+			if (!togglePressed || !this.inputDelay.checkFinished()
+					|| this.gameOver)
+				return false;
+			this.pauseMenu.open();
+			if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
+			this.logger.info("Endless run paused.");
+		} else if (togglePressed) {
+			this.pauseMenu.close(inputManager);
+			AudioManager.playSFX("audio/sfx/menu_select.wav");
+			this.logger.info("Endless run resumed.");
+			return false;
+		} else {
+			PauseMenu.Action action = this.pauseMenu.handleInput(inputManager);
+			if (action == PauseMenu.Action.RESUME) {
+				this.pauseMenu.close(inputManager);
+				AudioManager.playSFX("audio/sfx/menu_select.wav");
+				this.logger.info("Endless run resumed.");
+				return false;
+			}
+			if (action == PauseMenu.Action.QUIT) {
+				this.pauseMenu.close(inputManager);
+				abandonRun();
+				return true;
+			}
+		}
+		draw();
+		return true;
+	}
+
+	/**
+	 * Reports whether the run is paused.
+	 *
+	 * @return True while the pause menu is shown.
+	 */
+	public final boolean isPaused() {
+		return this.pauseMenu.isOpen();
 	}
 
 	void updatePlayerControls() {
@@ -316,6 +381,9 @@ public class InfiniteGameScreen extends Screen {
 			drawManager.drawHorizontalLine(this,
 					this.height / 2 + this.height / 12);
 		}
+		if (this.pauseMenu.isOpen())
+			drawManager.drawPauseMenu(this, PauseMenu.OPTIONS,
+					this.pauseMenu.getSelection());
 		drawManager.completeDrawing(this);
 	}
 

@@ -403,14 +403,14 @@ public class PlayerStatus {
 
 	/**
 	 * Reads the clock the shield is measured against. Tests override this to
-	 * reach the expiry boundary without waiting. A pause feature would also
-	 * hook in here, since the wall clock keeps running while the game is
-	 * paused.
+	 * reach the expiry boundary without waiting. It reads the gameplay
+	 * clock, which stops while the game is paused, so a shield or slow does
+	 * not run out behind the pause menu.
 	 *
 	 * @return Current time in milliseconds.
 	 */
 	long currentTimeMillis() {
-		return System.currentTimeMillis();
+		return engine.GameClock.currentTimeMillis();
 	}
 
 	/** Ends an active shield immediately, if there is one. */
