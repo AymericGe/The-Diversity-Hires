@@ -439,6 +439,8 @@ public class GameScreen extends Screen {
 		this.gameSettings = this.waves.get(0);
         this.bonusLife = bonusLife;
         this.level = gameState.getLevel();
+        // Match the background intensity to the current level.
+        setBackgroundLevel(this.level);
         this.difficulty = GameplayConfig.getDifficulty();
         this.score = gameState.getScore();
 		this.playerStatus = new PlayerStatus(
