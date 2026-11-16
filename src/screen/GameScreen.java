@@ -233,24 +233,8 @@ public class GameScreen extends Screen {
     /** Flag to track if the urgent low-health BGM is currently playing. */
     private boolean isLowHealthBGM = false;
 
-	/** Options of the pause menu, in display order. */
-	static final String[] PAUSE_OPTIONS = { "Resume", "Quit" };
-	/** Index of the "Resume" option in the pause menu. */
-	static final int PAUSE_RESUME = 0;
-	/** Index of the "Quit" option in the pause menu. */
-	static final int PAUSE_QUIT = 1;
-	/** Whether the game is paused and the pause menu is shown. */
-	private boolean paused;
-	/** Pause menu option currently highlighted. */
-	private int pauseSelection;
-	/** State of the pause keys (P, Esc) on the previous frame. */
-	private boolean pauseKeyWasDown;
-	/** State of the pause menu "up" keys on the previous frame. */
-	private boolean pauseUpWasDown;
-	/** State of the pause menu "down" keys on the previous frame. */
-	private boolean pauseDownWasDown;
-	/** State of the pause menu confirm keys on the previous frame. */
-	private boolean pauseConfirmWasDown;
+	/** Pause menu; P or Esc opens it during play. */
+	private final PauseMenu pauseMenu = new PauseMenu();
 
     /**
      * Constructor, establishes the properties of the screen.
@@ -600,11 +584,7 @@ public class GameScreen extends Screen {
         try { super.run(); }
         finally {
             // Never leave the gameplay clock stopped for the next screen.
-            if (this.paused) {
-                this.paused = false;
-                GameClock.resume();
-                AudioManager.resumeBGM();
-            }
+            this.pauseMenu.close(null);
             if (this.runSession != null) this.runSession.stopActiveSegment(System.nanoTime());
         }
 
@@ -817,23 +797,28 @@ public class GameScreen extends Screen {
 	 *         the rest of the update must be skipped.
 	 */
 	private boolean updatePause() {
-		boolean pauseKeyDown = inputManager.isKeyDown(KeyEvent.VK_ESCAPE)
-				|| (!isPauseKeyBoundElsewhere()
-						&& inputManager.isKeyDown(KeyEvent.VK_P));
-		boolean pausePressed = pauseKeyDown && !this.pauseKeyWasDown;
-		this.pauseKeyWasDown = pauseKeyDown;
+		boolean togglePressed = this.pauseMenu.pollToggle(inputManager, true);
 
-		if (!this.paused) {
-			if (!pausePressed || !canPause())
+		if (!this.pauseMenu.isOpen()) {
+			if (!togglePressed || !canPause())
 				return false;
-			openPauseMenu();
-		} else if (pausePressed) {
+			this.pauseMenu.open();
+			if (this.runSession != null)
+				this.runSession.stopActiveSegment(System.nanoTime());
+			this.logger.info("Game paused.");
+		} else if (togglePressed) {
 			resumeGame();
 			return false;
 		} else {
-			handlePauseMenuInput();
-			if (!this.paused)
-				return !this.isRunning;
+			PauseMenu.Action action = this.pauseMenu.handleInput(inputManager);
+			if (action == PauseMenu.Action.RESUME) {
+				resumeGame();
+				return false;
+			}
+			if (action == PauseMenu.Action.QUIT) {
+				quitFromPause();
+				return true;
+			}
 		}
 		draw();
 		return true;
@@ -850,71 +835,9 @@ public class GameScreen extends Screen {
 				&& this.playerStatus.isAlive();
 	}
 
-	/**
-	 * Checks whether the P key is also bound to movement or firing. Only Esc
-	 * opens the pause menu in that case.
-	 *
-	 * @return True if P is used by another control.
-	 */
-	private static boolean isPauseKeyBoundElsewhere() {
-		return ControlsConfig.getKey(ControlsConfig.LEFT) == KeyEvent.VK_P
-				|| ControlsConfig.getKey(ControlsConfig.RIGHT) == KeyEvent.VK_P
-				|| ControlsConfig.getKey(ControlsConfig.FIRE) == KeyEvent.VK_P;
-	}
-
-	/** Freezes the game and shows the pause menu. */
-	private void openPauseMenu() {
-		this.paused = true;
-		this.pauseSelection = PAUSE_RESUME;
-		// Keys already held (e.g. fire) must be released before they act in
-		// the menu, so holding Space cannot pick an option by accident.
-		this.pauseUpWasDown = true;
-		this.pauseDownWasDown = true;
-		this.pauseConfirmWasDown = true;
-
-		GameClock.pause();
-		AudioManager.pauseBGM();
-		if (this.runSession != null)
-			this.runSession.stopActiveSegment(System.nanoTime());
-		AudioManager.playSFX("audio/sfx/menu_select.wav");
-		this.logger.info("Game paused.");
-	}
-
-	/** Moves the selection and confirms options in the pause menu. */
-	private void handlePauseMenuInput() {
-		boolean up = inputManager.isKeyDown(KeyEvent.VK_UP)
-				|| inputManager.isKeyDown(KeyEvent.VK_W);
-		boolean down = inputManager.isKeyDown(KeyEvent.VK_DOWN)
-				|| inputManager.isKeyDown(KeyEvent.VK_S);
-		boolean confirm = inputManager.isKeyDown(KeyEvent.VK_SPACE)
-				|| inputManager.isKeyDown(KeyEvent.VK_ENTER);
-
-		if (up && !this.pauseUpWasDown) {
-			this.pauseSelection = (this.pauseSelection + PAUSE_OPTIONS.length - 1)
-					% PAUSE_OPTIONS.length;
-			AudioManager.playSFX("audio/sfx/menu_move.wav");
-		}
-		if (down && !this.pauseDownWasDown) {
-			this.pauseSelection = (this.pauseSelection + 1) % PAUSE_OPTIONS.length;
-			AudioManager.playSFX("audio/sfx/menu_move.wav");
-		}
-		this.pauseUpWasDown = up;
-		this.pauseDownWasDown = down;
-
-		if (confirm && !this.pauseConfirmWasDown) {
-			if (this.pauseSelection == PAUSE_QUIT)
-				quitFromPause();
-			else
-				resumeGame();
-		}
-		this.pauseConfirmWasDown = confirm;
-	}
-
 	/** Closes the pause menu and lets the game continue where it stopped. */
 	private void resumeGame() {
-		this.paused = false;
-		GameClock.resume();
-		AudioManager.resumeBGM();
+		this.pauseMenu.close(inputManager);
 		AudioManager.playSFX("audio/sfx/menu_select.wav");
 		this.logger.info("Game resumed.");
 	}
@@ -924,9 +847,7 @@ public class GameScreen extends Screen {
 	 * so the run ends and the score screen shows the score reached so far.
 	 */
 	private void quitFromPause() {
-		this.paused = false;
-		GameClock.resume();
-		AudioManager.resumeBGM();
+		this.pauseMenu.close(inputManager);
 		this.levelFinished = true;
 		this.stageCleared = false;
 		this.isRunning = false;
@@ -940,7 +861,7 @@ public class GameScreen extends Screen {
 	 * @return True while the pause menu is shown.
 	 */
 	public final boolean isPaused() {
-		return this.paused;
+		return this.pauseMenu.isOpen();
 	}
 
     /** Progression shared by official and custom stages. */
@@ -1130,8 +1051,9 @@ public class GameScreen extends Screen {
 
         if (this.visibleAchievement != null)
             drawManager.drawAchievementNotice(this, this.visibleAchievement);
-        if (this.paused)
-            drawManager.drawPauseMenu(this, PAUSE_OPTIONS, this.pauseSelection);
+        if (this.pauseMenu.isOpen())
+            drawManager.drawPauseMenu(this, PauseMenu.OPTIONS,
+                    this.pauseMenu.getSelection());
         drawManager.completeDrawing(this);
     }
 
