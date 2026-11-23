@@ -183,7 +183,10 @@ public class Screen {
 		return this.height;
 	}
 
-	public final void drawBackground(final Graphics graphics) {
+    protected final void setBackgroundLevel(final int level) {
+        this.starfield.setLevel(level);
+    }
+    public final void drawBackground(final Graphics graphics) {
 		this.starfield.draw(graphics);
 	}
 }
