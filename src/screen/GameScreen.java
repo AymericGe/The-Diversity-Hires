@@ -229,6 +229,8 @@ public class GameScreen extends Screen {
     static final String DEFEAT_ID_SEPARATOR = ":";
     /** Prevents repeated activation while holding H. */
     private boolean hyperfireKeyPressed = false;
+    /** Prevents multiple switches while holding B. */
+    private boolean rapidBurstKeyPressed = false;
     /** Flag to track if the urgent low-health BGM is currently playing. */
     private boolean isLowHealthBGM = false;
 
@@ -494,6 +496,7 @@ public class GameScreen extends Screen {
         this.hyperfireDroppedThisLevel = false;
         this.annihilatorDroppedThisLevel = false;
         this.hyperfireKeyPressed = false;
+        this.rapidBurstKeyPressed = false;
 
         this.grenades = new HashSet<Grenade>();
         this.fragments = new HashSet<GrenadeFragment>();
@@ -639,7 +642,36 @@ public class GameScreen extends Screen {
                     clampShipPosition();
                 }
 
-				// Normal shooting using configured controls.
+
+                // Cross-Ship Upgrade: toggle Rapid Burst with B.
+                boolean rapidBurstKeyDown =
+                        inputManager.isKeyDown(KeyEvent.VK_B);
+
+                if (this.campaignUpgrades.hasRapidBurst()
+                        && this.shipType != ShipType.SPEEDSTER
+                        && rapidBurstKeyDown
+                        && !this.rapidBurstKeyPressed) {
+
+                    BulletType nextType;
+
+                    if (this.ship.getCurrentBulletType()
+                            == BulletType.RAPID) {
+
+                        // Restore the original weapon.
+                        nextType = this.shipType.getBulletType();
+
+                    } else {
+
+                        // Activate purchased Rapid Burst.
+                        nextType = BulletType.RAPID;
+                    }
+
+                    this.ship.setBulletType(nextType);
+                }
+
+                this.rapidBurstKeyPressed = rapidBurstKeyDown;
+
+                // Normal shooting using configured controls.
 				if (inputManager.isKeyDown(
 						ControlsConfig.getKey(ControlsConfig.FIRE))) {
 					if (!this.annihilator.isCharging()) {
