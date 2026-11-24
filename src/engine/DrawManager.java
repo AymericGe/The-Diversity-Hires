@@ -1685,7 +1685,7 @@ public final class DrawManager {
     }
 
     /** Glow color per power-up name, or null if it has no glow. */
-    private static Color glowColorFor(final String name) {
+     static Color glowColorFor(final String name) {
         switch (name) {
             case "Hyperfire":
                 return GameColors.GLOW_HYPERFIRE;
