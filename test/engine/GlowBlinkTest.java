@@ -19,7 +19,7 @@ class GlowBlinkTest {
     }
 
     @Test
-    @DisplayName("Glow does not blink with exactly 2 seconds left")
+    @DisplayName("Glow does not blink with 2.0-2.9 seconds left (rounded down to 2)")
     void noBlinkAtTwoSeconds() {
         assertTrue(DrawManager.isGlowVisible(2, OFF));
     }

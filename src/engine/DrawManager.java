@@ -1746,7 +1746,9 @@ public final class DrawManager {
     /**
      * Checks if the glow is shown right now. In the last seconds of a
      * power-up it switches on and off every BLINK_INTERVAL_MS.
-     *
+     * Note: remainingSeconds is rounded down by BuffManager, so 2 means
+     *      * 2.0-2.9 s are left. That's why the check is ">=": blinking starts
+     *      * when less than BLINK_SECONDS are left.
      * @param remainingSeconds seconds left for the power-up
      * @param nowMillis        current time in milliseconds
      * @return true if the glow should be drawn
