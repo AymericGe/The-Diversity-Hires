@@ -1061,6 +1061,18 @@ public final class DrawManager {
                     screen.getHeight() / 2 + fontBigMetrics.getHeight() / 3);
     }
 
+    /** Shows the Shop shortcut during Endless gameplay. */
+    public void drawEndlessShopHint(final Screen screen) {
+        drawShopText(
+                "O - Open Shop",
+                screen.getWidth() - 130,
+                screen.getHeight() - 16,
+                11,
+                Color.CYAN,
+                122);
+    }
+
+
     /** Draws the shop cards and purchase/save feedback. */
     public void drawShop(final Screen screen, final List<ShopProduct> upgrades,
             final List<ShopProduct> unlocks, final PlayerAssetsState assets, final int section,
