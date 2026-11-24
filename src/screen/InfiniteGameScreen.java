@@ -466,7 +466,9 @@ public class InfiniteGameScreen extends Screen {
             drawManager.drawHorizontalLine(this,
                     this.height / 2 + this.height / 12);
         }
-        if (!this.gameOver && this.inputDelay.checkFinished()) {
+        if (!this.gameOver
+                && this.inputDelay.checkFinished()
+                && !this.pauseMenu.isOpen()) {
             drawManager.drawEndlessShopHint(this);
         }
         if (this.pauseMenu.isOpen())
@@ -518,6 +520,7 @@ public class InfiniteGameScreen extends Screen {
                 if (checkCollision(bullet, enemy)) {
                     this.score += enemy.getPointValue();
                     this.shipsDestroyed++;
+
                     recordEnemyDefeat(enemy);
                     AudioManager.playSFX("audio/sfx/enemy_explosion.wav");
                     this.particleSystem.spawnEnemyExplosion(
