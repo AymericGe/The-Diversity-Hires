@@ -67,7 +67,6 @@ import entity.item.AnnihilatorItem;
 import entity.item.BuffHud;
 import entity.item.ClusterGrenadeItem;
 import entity.item.TwinCanon;
-import boss.BossHudInfo;
 
 /**
  * Implements the game screen, where the action happens.
