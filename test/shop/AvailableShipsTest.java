@@ -25,7 +25,9 @@ class AvailableShipsTest {
         ShopTestFixtures.SaveFile save = save();
         ShopController shop = ShopTestFixtures.upgradeController(assets, save);
         List<ShopProduct> ships = shop.getProducts().stream()
-                .filter(product -> product.getCategory() == Category.UNLOCKABLE).toList();
+                .filter(product -> product.getCategory() == Category.UNLOCKABLE)
+                .filter(product -> product.getShipType() != null)
+                .toList();
 
         assertEquals(ShipType.values().length, ships.size());
         for (int index = 0; index < ships.size(); index++) {

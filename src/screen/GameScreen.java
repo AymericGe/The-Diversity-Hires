@@ -68,6 +68,7 @@ import entity.item.AnnihilatorItem;
 import entity.item.BuffHud;
 import entity.item.ClusterGrenadeItem;
 import entity.item.TwinCanon;
+import boss.BossHudInfo;
 
 /**
  * Implements the game screen, where the action happens.
@@ -230,6 +231,8 @@ public class GameScreen extends Screen {
     static final String DEFEAT_ID_SEPARATOR = ":";
     /** Prevents repeated activation while holding H. */
     private boolean hyperfireKeyPressed = false;
+    /** Prevents multiple switches while holding B. */
+    private boolean rapidBurstKeyPressed = false;
     /** Flag to track if the urgent low-health BGM is currently playing. */
     private boolean isLowHealthBGM = false;
 
@@ -443,6 +446,8 @@ public class GameScreen extends Screen {
 		this.gameSettings = this.waves.get(0);
         this.bonusLife = bonusLife;
         this.level = gameState.getLevel();
+        // Match the background intensity to the current level.
+        setBackgroundLevel(this.level);
         this.difficulty = GameplayConfig.getDifficulty();
         this.score = gameState.getScore();
 		this.playerStatus = new PlayerStatus(
@@ -498,6 +503,7 @@ public class GameScreen extends Screen {
         this.hyperfireDroppedThisLevel = false;
         this.annihilatorDroppedThisLevel = false;
         this.hyperfireKeyPressed = false;
+        this.rapidBurstKeyPressed = false;
 
         this.grenades = new HashSet<Grenade>();
         this.fragments = new HashSet<GrenadeFragment>();
@@ -650,7 +656,36 @@ public class GameScreen extends Screen {
                     clampShipPosition();
                 }
 
-				// Normal shooting using configured controls.
+
+                // Cross-Ship Upgrade: toggle Rapid Burst with B.
+                boolean rapidBurstKeyDown =
+                        inputManager.isKeyDown(KeyEvent.VK_B);
+
+                if (this.campaignUpgrades.hasRapidBurst()
+                        && this.shipType != ShipType.SPEEDSTER
+                        && rapidBurstKeyDown
+                        && !this.rapidBurstKeyPressed) {
+
+                    BulletType nextType;
+
+                    if (this.ship.getCurrentBulletType()
+                            == BulletType.RAPID) {
+
+                        // Restore the original weapon.
+                        nextType = this.shipType.getBulletType();
+
+                    } else {
+
+                        // Activate purchased Rapid Burst.
+                        nextType = BulletType.RAPID;
+                    }
+
+                    this.ship.setBulletType(nextType);
+                }
+
+                this.rapidBurstKeyPressed = rapidBurstKeyDown;
+
+                // Normal shooting using configured controls.
 				if (inputManager.isKeyDown(
 						ControlsConfig.getKey(ControlsConfig.FIRE))) {
 					if (!this.annihilator.isCharging()) {
@@ -968,6 +1003,11 @@ public class GameScreen extends Screen {
             drawManager.drawShield(this, this.ship);
         }
 
+        if (!this.ship.isDestroyed())
+            drawManager.drawPowerUpGlow(this.ship,
+                    this.itemManager.getBuffManager()
+                            .getActiveBuffsRemainingTime().keySet());
+
 		EnemyShip bonusShip = this.bonusEnemyManager.getShip();
 		if (bonusShip != null)
 			drawManager.drawEntity(bonusShip, bonusShip.getPositionX(),
@@ -1007,6 +1047,9 @@ public class GameScreen extends Screen {
 		drawManager.drawLives(this, this.playerStatus.getLives(),
 				this.playerStatus.getMaxLives());
 		drawManager.drawLevel(this, this.level, CampaignStageData.getTotalStages());
+		if (this.bossManager != null) {
+			drawManager.drawBossHealthBar(this, this.bossManager.getHudInfo());
+		}
 		try { // Includes rewards awaiting settlement; read every frame.
 			drawManager.drawCredits(this, Core.getAssetHudSnapshot().getCredits());
 		} catch (IllegalStateException e) {
