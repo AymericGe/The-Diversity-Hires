@@ -746,4 +746,34 @@ public class Ship extends Entity {
         this.baseColor = color;
         setColor(color);
     }
+
+    public final void pauseTimers(final long pausedMillis) {
+        if (pausedMillis < 0) {
+            throw new IllegalArgumentException(
+                    "Pause duration cannot be negative.");
+        }
+
+        this.destructionCooldown.pauseFor(pausedMillis);
+        this.invulnerabilityCooldown.pauseFor(pausedMillis);
+        this.damageFeedbackCooldown.pauseFor(pausedMillis);
+        this.grenadeCooldown.pauseFor(pausedMillis);
+
+        if (this.lastShotTime != 0) {
+            this.lastShotTime += pausedMillis;
+        }
+
+        if (this.nextShotTime != 0) {
+            this.nextShotTime += pausedMillis;
+        }
+
+        if (this.damageFeedbackStartTime != 0) {
+            this.damageFeedbackStartTime += pausedMillis;
+        }
+
+        if (this.chameleonHullActive) {
+            this.chameleonActivationTime += pausedMillis * 1_000_000L;
+        }
+    }
+
+
 }

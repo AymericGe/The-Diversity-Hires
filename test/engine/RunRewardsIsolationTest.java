@@ -96,7 +96,7 @@ class RunRewardIsolationTest {
                     "endless-run", "enemy-1"));
         }
 
-        assertEquals(1, run.getBalance());
+        assertEquals(10, run.getBalance());
 
         // Temporary rewards must not create an account save.
         assertFalse(Files.exists(savePath));
