@@ -1,5 +1,6 @@
 package entity.item;
 
+import engine.GameClock;
 import java.awt.Color;
 import engine.DrawManager.SpriteType;
 import entity.Ship;
@@ -38,7 +39,7 @@ public final class ChameleonHull extends Item {
 
     private static final boolean[][] STAR_SPRITE = createStarSprite();
 
-    private final long appearanceTime = System.nanoTime();
+    private final long appearanceTime = GameClock.nanoTime();
 
     public ChameleonHull(final int positionX, final int positionY) {
         super(positionX, positionY, 26, 26, SpriteType.Ship);
@@ -49,7 +50,7 @@ public final class ChameleonHull extends Item {
     public void update() {
         super.update();
 
-        long elapsed = System.nanoTime() - this.appearanceTime;
+        long elapsed = GameClock.nanoTime() - this.appearanceTime;
 
         int index = (int) (
                 (elapsed / COLOR_INTERVAL_NANOS) % COLORS.length

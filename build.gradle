@@ -112,6 +112,7 @@ def smokeTestClasses = [
     'PlayerStatusExtraLifeTest',
     'engine.CooldownVarianceTest',
     'engine.CoreDifficultySettingsTest',
+    'engine.GameClockTest',
     'entity.BossDefeatTest',
     'entity.BossPhaseTest',
     'entity.BulletOwnershipTest',

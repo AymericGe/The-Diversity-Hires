@@ -78,7 +78,7 @@ public class InfiniteGameScreen extends Screen {
     /** Whether the player requested the Endless Shop. */
     private boolean shopRequested;
 
-    /** Prevents opening the Shop repeatedly while holding P. */
+    /** Prevents opening the Shop repeatedly while holding O. */
     private boolean shopKeyHeld;
 
     /** Prevents Esc from abandoning the run after closing Shop. */
@@ -100,6 +100,8 @@ public class InfiniteGameScreen extends Screen {
 	private ParticleSystem particleSystem;
 	private long gameStartTime;
 	private int lastCountdown = -1;
+	/** Pause menu; P opens it during play (Esc still leaves the run). */
+	private final PauseMenu pauseMenu = new PauseMenu();
 
 	public InfiniteGameScreen(final GameState gameState, final int width,
 			final int height, final int fps) {
@@ -168,32 +170,38 @@ public class InfiniteGameScreen extends Screen {
 
 	public final int run() {
 		try { super.run(); }
-		finally { if (runSession != null) runSession.stopActiveSegment(System.nanoTime()); }
+		finally {
+			// Never leave the gameplay clock stopped for the next screen.
+			this.pauseMenu.close(null);
+			if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
+		}
 
 		this.logger.info("Infinite mode ended with a score of " + this.score);
 		return this.returnCode;
 	}
 
-	protected final void update() {
-		super.update();
-		if (this.recordsService != null) {
-			long now = System.currentTimeMillis();
-			if (this.visibleAchievement == null || now >= this.achievementNoticeUntil) {
-				this.visibleAchievement = this.recordsService.pollNotification();
+    protected final void update() {
+        super.update();
+        // While paused, only the pause menu runs; the game stays frozen.
+        if (updatePause())
+            return;
+        if (this.recordsService != null) {
+            long now = System.currentTimeMillis();
+            if (this.visibleAchievement == null || now >= this.achievementNoticeUntil) {
+                this.visibleAchievement = this.recordsService.pollNotification();
                 if (this.visibleAchievement != null) {
                     AudioManager.playSFX("audio/sfx/achievement_unlock.wav");
                 }
-				this.achievementNoticeUntil = this.visibleAchievement == null ? 0 : now + 3000;
-			}
-		}
+                this.achievementNoticeUntil = this.visibleAchievement == null ? 0 : now + 3000;
+            }
+        }
 
+        //update the current lives remaining to the DifficultyAdjustWhilePlaying class
+        DifficultyAdjustWhilePlaying.getInstance().update(this.lives);
+      
+        if (this.inputDelay.checkFinished() && !this.gameOver) {
 
-		//update the current lives remaining to the DifficultyAdjustWhilePlaying class
-		DifficultyAdjustWhilePlaying.getInstance().update(this.lives);
-
-		if (this.inputDelay.checkFinished() && !this.gameOver) {
-
-// Open the Shop once per O key press.
+            // Open the Shop once per O key press.
             boolean shopKeyDown =
                     inputManager.isKeyDown(KeyEvent.VK_O);
 
@@ -209,48 +217,105 @@ public class InfiniteGameScreen extends Screen {
             }
 
             if (runSession != null) runSession.startActiveSegment(System.nanoTime());
-			if (runSession != null && recordsService != null)
-				recordsService.activeDuration(runSession.getRunId(), runSession.getActiveDurationMillis(System.nanoTime()));
+            if (runSession != null && recordsService != null)
+                recordsService.activeDuration(runSession.getRunId(), runSession.getActiveDurationMillis(System.nanoTime()));
 
             boolean escapeDown =
                     inputManager.isKeyDown(KeyEvent.VK_ESCAPE);
 
+            // After closing the Shop, ignore Esc until it has been released.
             if (this.ignoreEscapeUntilRelease && !escapeDown) {
                 this.ignoreEscapeUntilRelease = false;
             }
 
-            if (escapeDown && !this.ignoreEscapeUntilRelease) {
+            if (escapeDown
+                    && !this.ignoreEscapeUntilRelease
+                    && this.pauseMenu.isEscapeFree(inputManager)) {
+                abandonRun();
+                return;
+            }
 
-                this.abandoned = true;
-				if (recordsService != null && runSession != null) recordsService.abandonRun(runSession.getRunId());
-				if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
-				// Leaving with Esc plays the same back sound as the menu screens.
-				AudioManager.playSFX("audio/sfx/menu_back.wav");
-				this.isRunning = false;
-				return;
-			}
+            updatePlayerControls();
+            spawnEnemy();
+            moveEnemies();
+            shootEnemies();
+        }
 
-			updatePlayerControls();
-			spawnEnemy();
-			moveEnemies();
-			shootEnemies();
-		}
+        this.ship.update();
+        manageCollisions();
+        cleanBullets();
+        this.particleSystem.update();
+        draw();
 
-		this.ship.update();
-		manageCollisions();
-		cleanBullets();
-		this.particleSystem.update();
-		draw();
+        if (this.lives == 0 && !this.gameOver) {
+            this.gameOver = true;
+            AudioManager.playSFX("audio/sfx/game_over.wav");
+            if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
+            this.screenFinishedCooldown.reset();
+        }
 
-		if (this.lives == 0 && !this.gameOver) {
-			this.gameOver = true;
-			AudioManager.playSFX("audio/sfx/game_over.wav");
+        if (this.gameOver && this.screenFinishedCooldown.checkFinished())
+            this.isRunning = false;
+    }
+
+	/** Leaves the run early; it counts as abandoned for the records. */
+	private void abandonRun() {
+		this.abandoned = true;
+		if (recordsService != null && runSession != null) recordsService.abandonRun(runSession.getRunId());
+		if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
+		// Leaving plays the same back sound as the menu screens.
+		AudioManager.playSFX("audio/sfx/menu_back.wav");
+		this.isRunning = false;
+	}
+
+	/**
+	 * Opens, runs and closes the pause menu. P opens it during play; P or
+	 * Esc closes it. Esc outside the menu still leaves the run, as before.
+	 * While paused the gameplay clock is stopped.
+	 *
+	 * @return True if the game is paused (or was just quit) this frame, so
+	 *         the rest of the update must be skipped.
+	 */
+	private boolean updatePause() {
+		boolean togglePressed = this.pauseMenu.pollToggle(inputManager, false);
+
+		if (!this.pauseMenu.isOpen()) {
+			if (!togglePressed || !this.inputDelay.checkFinished()
+					|| this.gameOver)
+				return false;
+			this.pauseMenu.open();
 			if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
-			this.screenFinishedCooldown.reset();
+			this.logger.info("Endless run paused.");
+		} else if (togglePressed) {
+			this.pauseMenu.close(inputManager);
+			AudioManager.playSFX("audio/sfx/menu_select.wav");
+			this.logger.info("Endless run resumed.");
+			return false;
+		} else {
+			PauseMenu.Action action = this.pauseMenu.handleInput(inputManager);
+			if (action == PauseMenu.Action.RESUME) {
+				this.pauseMenu.close(inputManager);
+				AudioManager.playSFX("audio/sfx/menu_select.wav");
+				this.logger.info("Endless run resumed.");
+				return false;
+			}
+			if (action == PauseMenu.Action.QUIT) {
+				this.pauseMenu.close(inputManager);
+				abandonRun();
+				return true;
+			}
 		}
+		draw();
+		return true;
+	}
 
-		if (this.gameOver && this.screenFinishedCooldown.checkFinished())
-			this.isRunning = false;
+	/**
+	 * Reports whether the run is paused.
+	 *
+	 * @return True while the pause menu is shown.
+	 */
+	public final boolean isPaused() {
+		return this.pauseMenu.isOpen();
 	}
 
 	void updatePlayerControls() {
@@ -403,9 +468,12 @@ public class InfiniteGameScreen extends Screen {
 			drawManager.drawHorizontalLine(this,
 					this.height / 2 + this.height / 12);
 		}
-        if (!this.gameOver && this.inputDelay.checkFinished()) {
-            drawManager.drawEndlessShopHint(this);
-        }
+		if (!this.gameOver && this.inputDelay.checkFinished()) {
+			drawManager.drawEndlessShopHint(this);
+		}
+		if (this.pauseMenu.isOpen())
+			drawManager.drawPauseMenu(this, PauseMenu.OPTIONS,
+					this.pauseMenu.getSelection());
 		drawManager.completeDrawing(this);
 	}
 

@@ -70,7 +70,7 @@ public class Cooldown {
 	 */
 	public final boolean checkFinished() {
 		if ((this.time == 0)
-				|| this.time + this.duration < System.currentTimeMillis())
+				|| this.time + this.duration < GameClock.currentTimeMillis())
 			return true;
 		return false;
 	}
@@ -88,21 +88,17 @@ public class Cooldown {
 	 * @throws IllegalStateException
 	 *             If this cooldown has variable duration.
 	 */
-	public final void setDuration(final int milliseconds) {
-		if (milliseconds < 0)
-			throw new IllegalArgumentException(
-					"Cooldown duration must not be negative.");
-		if (this.variance != 0)
-			throw new IllegalStateException(
-					"Cannot change a variable cooldown duration.");
+    public final void setDuration(final int milliseconds) {
+        if (milliseconds < 0)
+            throw new IllegalArgumentException(
+                    "Cooldown duration must not be negative.");
+        if (this.variance != 0)
+            throw new IllegalStateException(
+                    "Cannot change a variable cooldown duration.");
 
-		this.milliseconds = milliseconds;
-		this.duration = milliseconds;
-	}
-
-	/**
-	 * Restarts the cooldown.
-	 */
+        this.milliseconds = milliseconds;
+        this.duration = milliseconds;
+    }
 
     /**
      * Preserves the remaining cooldown after a gameplay pause.
@@ -120,12 +116,15 @@ public class Cooldown {
         }
     }
 
+    /**
+     * Restarts the cooldown.
+     */
     public final void reset() {
-		this.time = System.currentTimeMillis();
-		if (this.variance != 0)
-			this.duration = calculateDuration(this.milliseconds, this.variance,
-					Math.random());
-	}
+        this.time = GameClock.currentTimeMillis();
+        if (this.variance != 0)
+            this.duration = calculateDuration(this.milliseconds, this.variance,
+                    Math.random());
+    }
 
 	/**
 	 * Calculates a duration within the inclusive base +/- variance range.

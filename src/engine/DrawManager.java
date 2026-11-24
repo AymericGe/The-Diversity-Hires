@@ -21,7 +21,6 @@ import hud.FloatingScoreHud;
 import currency.PermanentUpgrade;
 import currency.PlayerAssetsState;
 import currency.ShopCatalog.Category;
-import engine.DrawManager.SpriteType;
 import shop.ShopController.SaveStatus;
 import shop.ShopProduct;
 import records.Achievement;
@@ -539,6 +538,39 @@ public final class DrawManager {
         drawCenteredBigString(screen, "Paused", screen.getHeight() / 2 + 20);
     }
 
+    /** Dark veil drawn over the frozen game behind the pause menu. */
+    private static final Color PAUSE_VEIL = new Color(0, 0, 0, 170);
+
+    /**
+     * Draws the pause menu over the frozen game: a dark veil, the pause
+     * overlay, the menu options and the controls hint.
+     *
+     * @param screen
+     *                 Screen to draw on.
+     * @param options
+     *                 Menu options, in display order.
+     * @param selected
+     *                 Index of the highlighted option.
+     */
+    public void drawPauseMenu(final Screen screen, final String[] options,
+            final int selected) {
+        backBufferGraphics.setColor(PAUSE_VEIL);
+        backBufferGraphics.fillRect(0, 0, screen.getWidth(), screen.getHeight());
+
+        drawPaused(screen);
+
+        int spacing = fontRegularMetrics.getHeight() * 3 / 2;
+        int firstY = screen.getHeight() / 2 + 70;
+        for (int i = 0; i < options.length; i++) {
+            backBufferGraphics.setColor(i == selected ? Color.GREEN : Color.WHITE);
+            drawCenteredRegularString(screen, options[i], firstY + i * spacing);
+        }
+
+        backBufferGraphics.setColor(GameColors.TEXT_DIM);
+        drawCenteredRegularString(screen, "SPACE: SELECT   ESC: RESUME",
+                screen.getHeight() - 40);
+    }
+
     /**
      * Draws an icon to the left of a centered menu label. The selected
      * option's icon is in full color and bobs; the others are dimmed.
@@ -674,7 +706,7 @@ public final class DrawManager {
     public void drawWeaponHeat(final Screen screen, final Ship ship) {
         if (ship.isDestroyed())
             return;
-        long now = System.currentTimeMillis();
+        long now = GameClock.currentTimeMillis();
         WeaponHeat weaponHeat = ship.getWeaponHeat();
         double heat = weaponHeat.getHeat(now);
         boolean jammed = weaponHeat.isJammed(now);
@@ -1617,7 +1649,7 @@ public final class DrawManager {
         int barWidth = 200;
         int barHeight = 8;
         int barX = (screen.getWidth() - barWidth) / 2;
-        int barY = 32;
+        int barY = 64;
 
         float ratio = Math.max(0.0f, (float) currentHp / maxHp);
         int fillWidth = (int) (barWidth * ratio);
@@ -1627,24 +1659,25 @@ public final class DrawManager {
         backBufferGraphics.fillRect(barX, barY, barWidth, barHeight);
 
         // 2. Health Fill (Green > Orange > Red based on health ratio)
-        if (ratio > 0.5f) {
-            backBufferGraphics.setColor(Color.GREEN);
-        } else if (ratio > 0.2f) {
-            backBufferGraphics.setColor(Color.ORANGE);
+        if (ratio > 0.5) {
+            backBufferGraphics.setColor(GameColors.HIGHLIGHT);
+        } else if (ratio > 0.25) {
+            backBufferGraphics.setColor(GameColors.EXPLOSION_ORANGE);
         } else {
-            backBufferGraphics.setColor(Color.RED);
+            backBufferGraphics.setColor(GameColors.DAMAGE);
         }
         backBufferGraphics.fillRect(barX, barY, fillWidth, barHeight);
 
         // 3. Border Outline
-        backBufferGraphics.setColor(Color.WHITE);
+        backBufferGraphics.setColor(GameColors.TEXT);
         backBufferGraphics.drawRect(barX, barY, barWidth, barHeight);
 
         // 4. Boss Name / Label above bar
         backBufferGraphics.setFont(fontRegular);
         String label = hudInfo.getBossType().name();
+        int labelY = barY - fontRegularMetrics.getDescent() - 4;
         int textWidth = fontRegularMetrics.stringWidth(label);
-        backBufferGraphics.drawString(label, (screen.getWidth() - textWidth) / 2, barY - 4);
+        backBufferGraphics.drawString(label, (screen.getWidth() - textWidth) / 2, labelY);
     }
 
     /**
@@ -1714,7 +1747,7 @@ public final class DrawManager {
     }
 
     /** Glow color per power-up name, or null if it has no glow. */
-    private static Color glowColorFor(final String name) {
+     static Color glowColorFor(final String name) {
         switch (name) {
             case "Hyperfire":
                 return GameColors.GLOW_HYPERFIRE;

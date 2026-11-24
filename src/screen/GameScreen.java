@@ -17,6 +17,7 @@ import engine.Cooldown;
 import engine.CampaignUpgrades;
 import engine.Core;
 import engine.GameSettings;
+import engine.GameClock;
 import engine.GameState;
 import engine.GameplayConfig;
 import engine.ControlsConfig;
@@ -67,7 +68,6 @@ import entity.item.AnnihilatorItem;
 import entity.item.BuffHud;
 import entity.item.ClusterGrenadeItem;
 import entity.item.TwinCanon;
-import boss.BossHudInfo;
 
 /**
  * Implements the game screen, where the action happens.
@@ -234,6 +234,9 @@ public class GameScreen extends Screen {
     private boolean rapidBurstKeyPressed = false;
     /** Flag to track if the urgent low-health BGM is currently playing. */
     private boolean isLowHealthBGM = false;
+
+	/** Pause menu; P or Esc opens it during play. */
+	private final PauseMenu pauseMenu = new PauseMenu();
 
     /**
      * Constructor, establishes the properties of the screen.
@@ -553,7 +556,7 @@ public class GameScreen extends Screen {
 		this.bossExplosionCooldown = Core.getCooldown(BOSS_EXPLOSION_TIME);
 
         // Special input delay / countdown.
-        this.gameStartTime = System.currentTimeMillis();
+        this.gameStartTime = GameClock.currentTimeMillis();
         this.inputDelay = Core.getCooldown(INPUT_DELAY);
         this.inputDelay.reset();
 
@@ -584,7 +587,11 @@ public class GameScreen extends Screen {
      */
     public final int run() {
         try { super.run(); }
-        finally { if (this.runSession != null) this.runSession.stopActiveSegment(System.nanoTime()); }
+        finally {
+            // Never leave the gameplay clock stopped for the next screen.
+            this.pauseMenu.close(null);
+            if (this.runSession != null) this.runSession.stopActiveSegment(System.nanoTime());
+        }
 
         // Life bonus is only awarded when the stage was cleared.
         if (this.stageCleared)
@@ -600,6 +607,9 @@ public class GameScreen extends Screen {
 	 */
 	protected final void update() {
 		super.update();
+		// While paused, only the pause menu runs; the game stays frozen.
+		if (updatePause())
+			return;
 		if (this.recordsService != null) {
 			long now = System.currentTimeMillis();
 			if (this.visibleAchievement == null || now >= this.achievementNoticeUntil) {
@@ -714,12 +724,12 @@ public class GameScreen extends Screen {
                     if (!this.annihilator.isReady()) {
                         this.spaceHeldSince = 0;
                     } else if (this.spaceHeldSince == 0) {
-                        this.spaceHeldSince = System.currentTimeMillis();
+                        this.spaceHeldSince = GameClock.currentTimeMillis();
                     }
 
                     if (this.spaceHeldSince != 0
                             && this.level == OrbitalAnnihilator.REQUIRED_LEVEL
-							&& System.currentTimeMillis() - this.spaceHeldSince >= ANNIHILATOR_HOLD_TIME) {
+							&& GameClock.currentTimeMillis() - this.spaceHeldSince >= ANNIHILATOR_HOLD_TIME) {
                         this.annihilator.trigger();
 						// Charging stops the ship shooting, so a burst that
 						// is still owed is dropped rather than fired when
@@ -810,6 +820,83 @@ public class GameScreen extends Screen {
         if (this.levelFinished && this.screenFinishedCooldown.checkFinished())
             this.isRunning = false;
     }
+
+	/**
+	 * Opens, runs and closes the pause menu. P or Esc opens it during play
+	 * and closes it again. While the game is paused the gameplay clock is
+	 * stopped, so power-ups, shields, cooldowns and item timers do not run
+	 * out behind the menu.
+	 *
+	 * @return True if the game is paused (or was just quit) this frame, so
+	 *         the rest of the update must be skipped.
+	 */
+	private boolean updatePause() {
+		boolean togglePressed = this.pauseMenu.pollToggle(inputManager, true);
+
+		if (!this.pauseMenu.isOpen()) {
+			if (!togglePressed || !canPause())
+				return false;
+			this.pauseMenu.open();
+			if (this.runSession != null)
+				this.runSession.stopActiveSegment(System.nanoTime());
+			this.logger.info("Game paused.");
+		} else if (togglePressed) {
+			resumeGame();
+			return false;
+		} else {
+			PauseMenu.Action action = this.pauseMenu.handleInput(inputManager);
+			if (action == PauseMenu.Action.RESUME) {
+				resumeGame();
+				return false;
+			}
+			if (action == PauseMenu.Action.QUIT) {
+				quitFromPause();
+				return true;
+			}
+		}
+		draw();
+		return true;
+	}
+
+	/**
+	 * Checks whether the game may be paused now: not during the countdown,
+	 * and not once the stage is over.
+	 *
+	 * @return True if the pause menu may open.
+	 */
+	private boolean canPause() {
+		return this.inputDelay.checkFinished() && !this.levelFinished
+				&& this.playerStatus.isAlive();
+	}
+
+	/** Closes the pause menu and lets the game continue where it stopped. */
+	private void resumeGame() {
+		this.pauseMenu.close(inputManager);
+		AudioManager.playSFX("audio/sfx/menu_select.wav");
+		this.logger.info("Game resumed.");
+	}
+
+	/**
+	 * Ends the stage from the pause menu. The stage counts as not cleared,
+	 * so the run ends and the score screen shows the score reached so far.
+	 */
+	private void quitFromPause() {
+		this.pauseMenu.close(inputManager);
+		this.levelFinished = true;
+		this.stageCleared = false;
+		this.isRunning = false;
+		AudioManager.playSFX("audio/sfx/menu_back.wav");
+		this.logger.info("Stage " + this.level + " quit from the pause menu.");
+	}
+
+	/**
+	 * Reports whether the game is paused.
+	 *
+	 * @return True while the pause menu is shown.
+	 */
+	public final boolean isPaused() {
+		return this.pauseMenu.isOpen();
+	}
 
     /** Progression shared by official and custom stages. */
     void advanceStageIfReady() {
@@ -972,7 +1059,7 @@ public class GameScreen extends Screen {
 		drawManager.drawGrenadeCount(this, this.ship.getGrenadeCount());
 		drawManager.drawBuffs(this, BuffHud.buildLines(
 				this.itemManager.getBuffManager().getActiveBuffsRemainingTime(),
-				System.currentTimeMillis()));
+				GameClock.currentTimeMillis()));
 
 		// The Orbital Annihilator is shown only once it has been caught.
 		if (this.annihilator.isReady())
@@ -992,7 +1079,7 @@ public class GameScreen extends Screen {
         // Countdown to game start.
         if (!this.inputDelay.checkFinished()) {
 			int countdown = (int) ((INPUT_DELAY
-					- (System.currentTimeMillis()
+					- (GameClock.currentTimeMillis()
 					- this.gameStartTime)) / 1000);
             playCountdownSound(countdown);
 			drawManager.drawCountDown(this, this.level, countdown,
@@ -1006,6 +1093,9 @@ public class GameScreen extends Screen {
 
         if (this.visibleAchievement != null)
             drawManager.drawAchievementNotice(this, this.visibleAchievement);
+        if (this.pauseMenu.isOpen())
+            drawManager.drawPauseMenu(this, PauseMenu.OPTIONS,
+                    this.pauseMenu.getSelection());
         drawManager.completeDrawing(this);
     }
 
