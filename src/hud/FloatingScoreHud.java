@@ -1,5 +1,6 @@
 package hud;
 
+import engine.GameClock;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Font;
@@ -35,7 +36,7 @@ public final class FloatingScoreHud {
                 ship.getPositionX() + ship.getWidth() / 2,
                 ship.getPositionY() - 7,
                 points,
-                System.currentTimeMillis()));
+                GameClock.currentTimeMillis()));
     }
 
     /** Draws onto the normal back buffer; no second window or launcher. */
@@ -46,7 +47,7 @@ public final class FloatingScoreHud {
                     RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             g.setFont(FONT);
             final FontMetrics metrics = g.getFontMetrics();
-            final long now = System.currentTimeMillis();
+            final long now = GameClock.currentTimeMillis();
             final Iterator<ScorePopup> iterator = popups.iterator();
             while (iterator.hasNext()) {
                 final ScorePopup popup = iterator.next();

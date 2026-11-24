@@ -538,6 +538,39 @@ public final class DrawManager {
         drawCenteredBigString(screen, "Paused", screen.getHeight() / 2 + 20);
     }
 
+    /** Dark veil drawn over the frozen game behind the pause menu. */
+    private static final Color PAUSE_VEIL = new Color(0, 0, 0, 170);
+
+    /**
+     * Draws the pause menu over the frozen game: a dark veil, the pause
+     * overlay, the menu options and the controls hint.
+     *
+     * @param screen
+     *                 Screen to draw on.
+     * @param options
+     *                 Menu options, in display order.
+     * @param selected
+     *                 Index of the highlighted option.
+     */
+    public void drawPauseMenu(final Screen screen, final String[] options,
+            final int selected) {
+        backBufferGraphics.setColor(PAUSE_VEIL);
+        backBufferGraphics.fillRect(0, 0, screen.getWidth(), screen.getHeight());
+
+        drawPaused(screen);
+
+        int spacing = fontRegularMetrics.getHeight() * 3 / 2;
+        int firstY = screen.getHeight() / 2 + 70;
+        for (int i = 0; i < options.length; i++) {
+            backBufferGraphics.setColor(i == selected ? Color.GREEN : Color.WHITE);
+            drawCenteredRegularString(screen, options[i], firstY + i * spacing);
+        }
+
+        backBufferGraphics.setColor(GameColors.TEXT_DIM);
+        drawCenteredRegularString(screen, "SPACE: SELECT   ESC: RESUME",
+                screen.getHeight() - 40);
+    }
+
     /**
      * Draws an icon to the left of a centered menu label. The selected
      * option's icon is in full color and bobs; the others are dimmed.
@@ -673,7 +706,7 @@ public final class DrawManager {
     public void drawWeaponHeat(final Screen screen, final Ship ship) {
         if (ship.isDestroyed())
             return;
-        long now = System.currentTimeMillis();
+        long now = GameClock.currentTimeMillis();
         WeaponHeat weaponHeat = ship.getWeaponHeat();
         double heat = weaponHeat.getHeat(now);
         boolean jammed = weaponHeat.isJammed(now);
