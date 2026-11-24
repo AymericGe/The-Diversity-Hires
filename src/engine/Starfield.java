@@ -5,47 +5,65 @@ import java.awt.Graphics;
 import java.util.Random;
 
 /**
- * Background of small stars that scroll slowly downwards and loop back to the top of the screen.
+ * A scrolling starfield that becomes more intense with each level.
  */
 public final class Starfield {
 
-    private static final int STAR_COUNT = 60;
-    /** Downwards speed of the stars, in pixels per second. */
-    private static final double SPEED = 30.0;
+    private static final int MAX_STARS = 180;
 
     private final int width;
     private final int height;
-    private final double[] x = new double[STAR_COUNT];
-    private final double[] y = new double[STAR_COUNT];
+    private final double[] x = new double[MAX_STARS];
+    private final double[] y = new double[MAX_STARS];
+    private final double[] depth = new double[MAX_STARS];
     private final Random random = new Random();
 
-    /**
-     * Places every star at a random position inside the given area.
-     *
-     * @param width
-     *            Width of the area, in pixels.
-     * @param height
-     *            Height of the area, in pixels.
-     */
+    private double intensity;
+    private double targetIntensity;
+    private boolean levelConfigured;
+
     public Starfield(final int width, final int height) {
         this.width = width;
         this.height = height;
 
-        for (int i = 0; i < STAR_COUNT; i++) {
+        for (int i = 0; i < MAX_STARS; i++) {
             x[i] = random.nextInt(width);
             y[i] = random.nextInt(height);
+            depth[i] = 0.5 + random.nextDouble();
         }
     }
 
     /**
-     * Moves the stars down. A star leaving the bottom reappears at the top with a new random horizontal position.
-     *
-     * @param deltaSeconds
-     *            Time elapsed since the previous update, in seconds.
+     * Sets the background intensity for the current level.
+     * Level 1 has the lowest intensity; level 7 has the highest.
      */
+    public void setLevel(final int level) {
+        int safeLevel = Math.max(1, Math.min(7, level));
+        targetIntensity = (safeLevel - 1) / 6.0;
+
+        if (!levelConfigured) {
+            // Start at the previous level's intensity for a smooth transition.
+            intensity = Math.max(0, safeLevel - 2) / 6.0;
+            levelConfigured = true;
+        }
+    }
+
     public void update(final double deltaSeconds) {
-        for (int i = 0; i < STAR_COUNT; i++) {
-            y[i] += SPEED * deltaSeconds;
+        if (!Double.isFinite(deltaSeconds) || deltaSeconds <= 0) {
+            return;
+        }
+
+        // Limit the time step to prevent large jumps after a delay.
+        double dt = Math.min(deltaSeconds, 0.1);
+
+        // Smoothly approach the current level's target intensity.
+        intensity += (targetIntensity - intensity)
+                * (1.0 - Math.exp(-dt * 2.0));
+
+        double speed = 30.0 + 150.0 * intensity;
+
+        for (int i = 0; i < MAX_STARS; i++) {
+            y[i] += speed * depth[i] * dt;
 
             if (y[i] >= height) {
                 y[i] %= height;
@@ -54,20 +72,50 @@ public final class Starfield {
         }
     }
 
-    /**
-     * Draws the stars, then restores the previous color of the context.
-     *
-     * @param graphics
-     *            Graphics context to draw on.
-     */
     public void draw(final Graphics graphics) {
-        Color previousColor = graphics.getColor();
-        graphics.setColor(new Color(130, 140, 160));
+        // Use a separate context to preserve the caller's graphics state.
+        Graphics g = graphics.create();
 
-        for (int i = 0; i < STAR_COUNT; i++) {
-            graphics.fillRect((int) x[i], (int) y[i], 2, 2);
+        try {
+            if (levelConfigured) {
+                // Shift from dark blue to dark purple-red.
+                // Keep the background dark so enemies and bullets remain visible.
+                int red = (int) (3 + 32 * intensity);
+                int blue = (int) (20 + 10 * Math.sin(Math.PI * intensity));
+
+                g.setColor(new Color(red, 3, blue));
+                g.fillRect(0, 0, width, height);
+            }
+
+            // Gradually increase the star count from 60 to 180.
+            double count = 60 + 120 * intensity;
+
+            for (int i = 0; i < Math.ceil(count); i++) {
+                int sx = (int) x[i];
+                int sy = (int) y[i];
+
+                // Fade in newly appearing stars.
+                int alpha = (int) (210 * Math.min(1.0, count - i));
+
+                // Increase trail length at higher levels.
+                int trail = (int) (18 * intensity * depth[i]);
+
+                if (trail > 0) {
+                    g.setColor(new Color(160, 100, 190, alpha / 3));
+                    g.drawLine(sx, sy - trail, sx, sy);
+                }
+
+                g.setColor(new Color(
+                        130 + (int) (65 * intensity),
+                        140 - (int) (25 * intensity),
+                        180,
+                        alpha
+                ));
+
+                g.fillRect(sx, sy, 2, 2);
+            }
+        } finally {
+            g.dispose();
         }
-
-        graphics.setColor(previousColor);
     }
 }

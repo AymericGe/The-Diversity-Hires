@@ -2,6 +2,7 @@ package engine;
 
 import entity.ShipType;
 import entity.item.ChameleonHull;
+import boss.BossHudInfo;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -33,6 +34,7 @@ import entity.GrenadeFragment;
 import entity.item.AnnihilatorItem;
 import entity.item.ClusterGrenadeItem;
 import entity.Ship;
+import entity.WeaponHeat;
 import entity.Bullet;
 import vfx.Icon;
 import vfx.RankBadge;
@@ -537,6 +539,39 @@ public final class DrawManager {
         drawCenteredBigString(screen, "Paused", screen.getHeight() / 2 + 20);
     }
 
+    /** Dark veil drawn over the frozen game behind the pause menu. */
+    private static final Color PAUSE_VEIL = new Color(0, 0, 0, 170);
+
+    /**
+     * Draws the pause menu over the frozen game: a dark veil, the pause
+     * overlay, the menu options and the controls hint.
+     *
+     * @param screen
+     *                 Screen to draw on.
+     * @param options
+     *                 Menu options, in display order.
+     * @param selected
+     *                 Index of the highlighted option.
+     */
+    public void drawPauseMenu(final Screen screen, final String[] options,
+            final int selected) {
+        backBufferGraphics.setColor(PAUSE_VEIL);
+        backBufferGraphics.fillRect(0, 0, screen.getWidth(), screen.getHeight());
+
+        drawPaused(screen);
+
+        int spacing = fontRegularMetrics.getHeight() * 3 / 2;
+        int firstY = screen.getHeight() / 2 + 70;
+        for (int i = 0; i < options.length; i++) {
+            backBufferGraphics.setColor(i == selected ? Color.GREEN : Color.WHITE);
+            drawCenteredRegularString(screen, options[i], firstY + i * spacing);
+        }
+
+        backBufferGraphics.setColor(GameColors.TEXT_DIM);
+        drawCenteredRegularString(screen, "SPACE: SELECT   ESC: RESUME",
+                screen.getHeight() - 40);
+    }
+
     /**
      * Draws an icon to the left of a centered menu label. The selected
      * option's icon is in full color and bobs; the others are dimmed.
@@ -656,6 +691,64 @@ public final class DrawManager {
             backBufferGraphics.setColor(flicker ? Color.WHITE : Color.RED);
             backBufferGraphics.fillOval(centerX - radius, startY - radius, radius * 2, radius * 2);
         }
+    }
+
+    /**
+     * Draws the gun heat bar above the player's ship. The bar goes from
+     * green to orange to red as the gun heats up, and flashes red with an
+     * "OVERHEATED" label while the gun is jammed. Nothing is drawn while
+     * the gun is cold.
+     *
+     * @param screen
+     *                 Screen to draw on.
+     * @param ship
+     *                 Player ship whose gun heat is shown.
+     */
+    public void drawWeaponHeat(final Screen screen, final Ship ship) {
+        if (ship.isDestroyed())
+            return;
+        long now = GameClock.currentTimeMillis();
+        WeaponHeat weaponHeat = ship.getWeaponHeat();
+        double heat = weaponHeat.getHeat(now);
+        boolean jammed = weaponHeat.isJammed(now);
+        if (heat <= 0 && !jammed)
+            return;
+
+        int barWidth = ship.getWidth();
+        int barHeight = 4;
+        int barX = ship.getPositionX();
+        int barY = ship.getPositionY() - barHeight - 3;
+        boolean flashOn = (now / 150) % 2 == 0;
+
+        Color fill;
+        if (jammed)
+            fill = flashOn ? GameColors.DAMAGE : GameColors.EXPLOSION_YELLOW;
+        else if (heat < 0.5)
+            fill = GameColors.HIGHLIGHT;
+        else if (heat < 0.8)
+            fill = GameColors.EXPLOSION_ORANGE;
+        else
+            fill = GameColors.DAMAGE;
+
+        Color previous = backBufferGraphics.getColor();
+        backBufferGraphics.setColor(GameColors.HEAT_BAR_BACKGROUND);
+        backBufferGraphics.fillRect(barX, barY, barWidth, barHeight);
+        backBufferGraphics.setColor(fill);
+        backBufferGraphics.fillRect(barX, barY, (int) Math.round(barWidth
+                * heat), barHeight);
+
+        if (jammed && flashOn) {
+            String label = "OVERHEATED";
+            backBufferGraphics.setFont(fontRegular.deriveFont(10f));
+            FontMetrics metrics = backBufferGraphics.getFontMetrics();
+            int labelX = ship.getPositionX() + ship.getWidth() / 2
+                    - metrics.stringWidth(label) / 2;
+            labelX = Math.max(2, Math.min(labelX, screen.getWidth()
+                    - metrics.stringWidth(label) - 2));
+            backBufferGraphics.setColor(GameColors.DAMAGE);
+            backBufferGraphics.drawString(label, labelX, barY - 4);
+        }
+        backBufferGraphics.setColor(previous);
     }
 
     /**
@@ -1547,6 +1640,57 @@ public final class DrawManager {
     }
 
     /**
+     * Draws the boss health bar and name at the top of the screen.
+     *
+     * @param screen Screen to draw on.
+     * @param hudInfo Boss HUD information containing health and visibility.
+     */
+    public void drawBossHealthBar(final Screen screen, final BossHudInfo hudInfo) {
+        if (hudInfo == null || !hudInfo.isVisible()) {
+            return;
+        }
+
+        int currentHp = hudInfo.getCurrentHealth();
+        int maxHp = hudInfo.getMaxHealth();
+        if (maxHp <= 0) {
+            return;
+        }
+
+        int barWidth = 200;
+        int barHeight = 8;
+        int barX = (screen.getWidth() - barWidth) / 2;
+        int barY = 64;
+
+        float ratio = Math.max(0.0f, (float) currentHp / maxHp);
+        int fillWidth = (int) (barWidth * ratio);
+
+        // 1. Background (dark container)
+        backBufferGraphics.setColor(new Color(50, 50, 50, 220));
+        backBufferGraphics.fillRect(barX, barY, barWidth, barHeight);
+
+        // 2. Health Fill (Green > Orange > Red based on health ratio)
+        if (ratio > 0.5) {
+            backBufferGraphics.setColor(GameColors.HIGHLIGHT);
+        } else if (ratio > 0.25) {
+            backBufferGraphics.setColor(GameColors.EXPLOSION_ORANGE);
+        } else {
+            backBufferGraphics.setColor(GameColors.DAMAGE);
+        }
+        backBufferGraphics.fillRect(barX, barY, fillWidth, barHeight);
+
+        // 3. Border Outline
+        backBufferGraphics.setColor(GameColors.TEXT);
+        backBufferGraphics.drawRect(barX, barY, barWidth, barHeight);
+
+        // 4. Boss Name / Label above bar
+        backBufferGraphics.setFont(fontRegular);
+        String label = hudInfo.getBossType().name();
+        int labelY = barY - fontRegularMetrics.getDescent() - 4;
+        int textWidth = fontRegularMetrics.stringWidth(label);
+        backBufferGraphics.drawString(label, (screen.getWidth() - textWidth) / 2, labelY);
+    }
+
+    /**
      * Draws a blinking message in the top bar when the Orbital Annihilator
      * is ready to be used.
      *
@@ -1580,6 +1724,50 @@ public final class DrawManager {
         // Dessine le contour plus net du bouclier
         backBufferGraphics.setColor(Color.CYAN);
         backBufferGraphics.drawOval(x, y, width, height);
+    }
+    /**
+     * Draws a colored glow around the ship for every active timed power-up.
+     *
+     * @param ship         the player ship
+     * @param activeBuffs  names of the active power-ups (from BuffManager)
+     */
+    public void drawPowerUpGlow(final Entity ship,
+                                final java.util.Set<String> activeBuffs) {
+        int padding = 6;
+        for (String name : activeBuffs) {
+            Color color = glowColorFor(name);
+            if (color == null)
+                continue;
+
+            int x = ship.getPositionX() - padding;
+            int y = ship.getPositionY() - padding;
+            int width = ship.getWidth() + padding * 2;
+            int height = ship.getHeight() + padding * 2;
+
+            // soft inner glow
+            backBufferGraphics.setColor(new Color(color.getRed(),
+                    color.getGreen(), color.getBlue(), 70));
+            backBufferGraphics.fillOval(x, y, width, height);
+            // sharp outline
+            backBufferGraphics.setColor(color);
+            backBufferGraphics.drawOval(x, y, width, height);
+
+            padding += 3; // several power-ups: rings get bigger
+        }
+    }
+
+    /** Glow color per power-up name, or null if it has no glow. */
+     static Color glowColorFor(final String name) {
+        switch (name) {
+            case "Hyperfire":
+                return GameColors.GLOW_HYPERFIRE;
+            case "Twin Cannon":
+                return GameColors.GLOW_TWIN_CANNON;
+            case "Chameleon Hull":
+                return GameColors.GLOW_CHAMELEON;
+            default:
+                return null; // Energy Shield already has drawShield
+        }
     }
 
     private String getKeyDisplayText(final int keyCode) {

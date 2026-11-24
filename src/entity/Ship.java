@@ -2,6 +2,7 @@ package entity;
 
 import engine.Cooldown;
 import engine.Core;
+import engine.GameClock;
 import engine.DrawManager.SpriteType;
 import java.awt.Color;
 import java.util.Set;
@@ -47,6 +48,9 @@ public class Ship extends Entity {
 
     /** Whether the Hyperfire buff is currently enabled. */
     private boolean hyperfireEnabled = false;
+
+    /** Heat of the gun; shooting constantly overheats and jams it. */
+    private final WeaponHeat weaponHeat = new WeaponHeat();
 
     /** Distance from the ship center to each barrel of the Twin Cannon. */
     private static final int TWIN_CANNON_OFFSET = 8;
@@ -227,7 +231,7 @@ public class Ship extends Entity {
             return 0;
         }
 
-        long currentTime = System.currentTimeMillis();
+        long currentTime = GameClock.currentTimeMillis();
 
         int interval = this.shootingInterval;
 
@@ -239,7 +243,12 @@ public class Ship extends Entity {
             return 0;
         }
 
+        if (!this.weaponHeat.canShoot(currentTime)) {
+            return 0;
+        }
+
         lastShotTime = currentTime;
+        this.weaponHeat.addShot(currentTime);
 
         int x = this.positionX + this.width / 2;
         int y = this.positionY;
@@ -312,7 +321,7 @@ public class Ship extends Entity {
             return 0;
         }
 
-        long currentTime = System.currentTimeMillis();
+        long currentTime = GameClock.currentTimeMillis();
 
         if (currentTime < this.nextShotTime) {
             return 0;
@@ -414,7 +423,7 @@ public class Ship extends Entity {
      */
     public final void update() {
         if (this.chameleonHullActive) {
-            long elapsed = System.nanoTime() - this.chameleonActivationTime;
+            long elapsed = GameClock.nanoTime() - this.chameleonActivationTime;
 
             int index = (int) ((elapsed / entity.item.ChameleonHull.COLOR_INTERVAL_NANOS)
                     % CHAMELEON_COLORS.length);
@@ -423,7 +432,7 @@ public class Ship extends Entity {
         } else if (this.damageFeedbackCooldown != null
                 && !this.damageFeedbackCooldown.checkFinished()) {
             // Alternate red and normal for 0.5s immediately after damage
-            long elapsed = System.currentTimeMillis() - this.damageFeedbackStartTime;
+            long elapsed = GameClock.currentTimeMillis() - this.damageFeedbackStartTime;
             if ((elapsed / FLASH_INTERVAL) % 2 == 0) {
                 setColor(Color.RED);
             } else {
@@ -491,6 +500,15 @@ public class Ship extends Entity {
      */
     public final ShipType getShipType() {
         return this.shipType;
+    }
+
+    /**
+     * Getter for the heat of the gun.
+     *
+     * @return Weapon heat of this ship.
+     */
+    public final WeaponHeat getWeaponHeat() {
+        return this.weaponHeat;
     }
 
     /**
@@ -648,7 +666,7 @@ public class Ship extends Entity {
         }
 
         this.chameleonHullActive = true;
-        this.chameleonActivationTime = System.nanoTime();
+        this.chameleonActivationTime = GameClock.nanoTime();
 
         setColor(CHAMELEON_COLORS[0]);
     }
@@ -718,7 +736,7 @@ public class Ship extends Entity {
         if (this.chameleonHullActive || this.isShieldActive) {
             return;
         }
-        this.damageFeedbackStartTime = System.currentTimeMillis();
+        this.damageFeedbackStartTime = GameClock.currentTimeMillis();
         this.damageFeedbackCooldown.reset();
     }
     public final void setBaseColor(final Color color) {
