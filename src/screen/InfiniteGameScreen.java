@@ -193,9 +193,9 @@ public class InfiniteGameScreen extends Screen {
 
 		if (this.inputDelay.checkFinished() && !this.gameOver) {
 
-// Open the Shop once per P key press.
+// Open the Shop once per O key press.
             boolean shopKeyDown =
-                    inputManager.isKeyDown(KeyEvent.VK_P);
+                    inputManager.isKeyDown(KeyEvent.VK_O);
 
             boolean openShop =
                     shopKeyDown && !this.shopKeyHeld;
@@ -403,6 +403,9 @@ public class InfiniteGameScreen extends Screen {
 			drawManager.drawHorizontalLine(this,
 					this.height / 2 + this.height / 12);
 		}
+        if (!this.gameOver && this.inputDelay.checkFinished()) {
+            drawManager.drawEndlessShopHint(this);
+        }
 		drawManager.completeDrawing(this);
 	}
 
