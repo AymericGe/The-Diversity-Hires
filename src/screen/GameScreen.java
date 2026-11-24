@@ -1005,7 +1005,7 @@ public class GameScreen extends Screen {
         if (!this.ship.isDestroyed())
             drawManager.drawPowerUpGlow(this.ship,
                     this.itemManager.getBuffManager()
-                            .getActiveBuffsRemainingTime().keySet());
+                            .getActiveBuffsRemainingTime());
 
 		EnemyShip bonusShip = this.bonusEnemyManager.getShip();
 		if (bonusShip != null)

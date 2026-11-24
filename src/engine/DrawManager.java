@@ -1062,6 +1062,18 @@ public final class DrawManager {
                     screen.getHeight() / 2 + fontBigMetrics.getHeight() / 3);
     }
 
+    /** Shows the Shop shortcut during Endless gameplay. */
+    public void drawEndlessShopHint(final Screen screen) {
+        drawShopText(
+                "O - Open Shop",
+                screen.getWidth() - 130,
+                screen.getHeight() - 16,
+                11,
+                Color.CYAN,
+                122);
+    }
+
+
     /** Draws the shop cards and purchase/save feedback. */
     public void drawShop(final Screen screen, final List<ShopProduct> upgrades,
             final List<ShopProduct> unlocks, final PlayerAssetsState assets, final int section,
@@ -1725,35 +1737,60 @@ public final class DrawManager {
         backBufferGraphics.setColor(Color.CYAN);
         backBufferGraphics.drawOval(x, y, width, height);
     }
+    /** Glow starts blinking when a power-up has less than this many seconds left. */
+    static final long BLINK_SECONDS = 2;
+    /** How long the glow stays on or off while blinking, in milliseconds. */
+    static final long BLINK_INTERVAL_MS = 150;
+
     /**
      * Draws a colored glow around the ship for every active timed power-up.
+     * In the last seconds of a power-up the glow blinks.
      *
      * @param ship         the player ship
-     * @param activeBuffs  names of the active power-ups (from BuffManager)
+     * @param activeBuffs  active power-ups and their remaining seconds (from BuffManager)
      */
     public void drawPowerUpGlow(final Entity ship,
-                                final java.util.Set<String> activeBuffs) {
+                                final java.util.Map<String, Long> activeBuffs) {
         int padding = 6;
-        for (String name : activeBuffs) {
-            Color color = glowColorFor(name);
+        long now = System.currentTimeMillis();
+        for (java.util.Map.Entry<String, Long> buff : activeBuffs.entrySet()) {
+            Color color = glowColorFor(buff.getKey());
             if (color == null)
                 continue;
 
-            int x = ship.getPositionX() - padding;
-            int y = ship.getPositionY() - padding;
-            int width = ship.getWidth() + padding * 2;
-            int height = ship.getHeight() + padding * 2;
+            if (isGlowVisible(buff.getValue(), now)) {
+                int x = ship.getPositionX() - padding;
+                int y = ship.getPositionY() - padding;
+                int width = ship.getWidth() + padding * 2;
+                int height = ship.getHeight() + padding * 2;
 
-            // soft inner glow
-            backBufferGraphics.setColor(new Color(color.getRed(),
-                    color.getGreen(), color.getBlue(), 70));
-            backBufferGraphics.fillOval(x, y, width, height);
-            // sharp outline
-            backBufferGraphics.setColor(color);
-            backBufferGraphics.drawOval(x, y, width, height);
+                // soft inner glow
+                backBufferGraphics.setColor(new Color(color.getRed(),
+                        color.getGreen(), color.getBlue(), 70));
+                backBufferGraphics.fillOval(x, y, width, height);
+                // sharp outline
+                backBufferGraphics.setColor(color);
+                backBufferGraphics.drawOval(x, y, width, height);
+            }
 
             padding += 3; // several power-ups: rings get bigger
         }
+    }
+
+    /**
+     * Checks if the glow is shown right now. In the last seconds of a
+     * power-up it switches on and off every BLINK_INTERVAL_MS.
+     * Note: remainingSeconds is rounded down by BuffManager, so 2 means
+     *      * 2.0-2.9 s are left. That's why the check is ">=": blinking starts
+     *      * when less than BLINK_SECONDS are left.
+     * @param remainingSeconds seconds left for the power-up
+     * @param nowMillis        current time in milliseconds
+     * @return true if the glow should be drawn
+     */
+    static boolean isGlowVisible(final long remainingSeconds, final long nowMillis) {
+        if (remainingSeconds >= BLINK_SECONDS)
+            return true;
+        return (nowMillis / BLINK_INTERVAL_MS) % 2 == 0;
     }
 
     /** Glow color per power-up name, or null if it has no glow. */
