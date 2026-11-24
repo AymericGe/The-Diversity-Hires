@@ -13,21 +13,40 @@ public class RewardSettlementCoordinator {
     private final PlayerAssets playerAssets;
     private final FileManager fileManager;
     private final Path customSavePath;
+    private final boolean saveToDisk;
 
-    public RewardSettlementCoordinator(RewardSystem rewardSystem, PlayerAssets playerAssets, FileManager fileManager) {
-        this(rewardSystem, playerAssets, fileManager, null);
+
+    RewardSettlementCoordinator(
+            RewardSystem rewardSystem,
+            PlayerAssets playerAssets,
+            FileManager fileManager,
+            Path customSavePath) {
+
+        this(rewardSystem, playerAssets, fileManager,
+                customSavePath, true);
     }
 
-    /** Constructor with package-private visibility for isolated testing. */
-    RewardSettlementCoordinator(RewardSystem rewardSystem, PlayerAssets playerAssets, FileManager fileManager, Path customSavePath) {
-        if (rewardSystem == null || playerAssets == null || fileManager == null) {
-            throw new IllegalArgumentException("Dependencies cannot be null.");
+    RewardSettlementCoordinator(
+            RewardSystem rewardSystem,
+            PlayerAssets playerAssets,
+            FileManager fileManager,
+            Path customSavePath,
+            boolean saveToDisk) {
+
+        if (rewardSystem == null
+                || playerAssets == null
+                || fileManager == null) {
+            throw new IllegalArgumentException(
+                    "Dependencies cannot be null.");
         }
+
         this.rewardSystem = rewardSystem;
         this.playerAssets = playerAssets;
         this.fileManager = fileManager;
         this.customSavePath = customSavePath;
+        this.saveToDisk = saveToDisk;
     }
+
 
     /**
      * Settles accumulated rewards and saves the updated asset state to disk.
@@ -59,6 +78,11 @@ public class RewardSettlementCoordinator {
     }
 
     private SettlementResult saveLatestAssets() {
+        // Run Credits exist only during the current run.
+        // Never overwrite the permanent account save.
+        if (!saveToDisk) {
+            return SettlementResult.SUCCESS;
+        }
         PlayerAssetsState snapshot = playerAssets.snapshot();
 
         try {

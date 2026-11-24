@@ -40,13 +40,13 @@ class EndlessRewardsTest {
         GameplayEventPublisher events = new GameplayEventPublisher();
         try (EndlessRewards.RunSubscription run = rewards.subscribe(events, "endless")) {
             events.publish(new EnemyDefeatedEvent("endless", "enemy", type));
-            assertEquals(1, rewards.getPendingCurrency());
+            assertEquals(10, rewards.getPendingCurrency());
             assertEquals(0, assets.getBalance());
             assertFalse(Files.exists(save));
         }
-        assertEquals(1, assets.getBalance());
+        assertEquals(10, assets.getBalance());
         assertEquals(0, rewards.getPendingCurrency());
-        assertEquals(1, files.loadPlayerAssets(save).getBalance());
+        assertEquals(10, files.loadPlayerAssets(save).getBalance());
     }
 
     @Test
@@ -59,13 +59,13 @@ class EndlessRewardsTest {
             events.publish(new EnemyDefeatedEvent("endless", "same"));
             events.publish(new EnemyDefeatedEvent("endless", "same", DefeatedEnemyType.BOSS_B));
             events.publish(new EnemyDefeatedEvent("endless", "second"));
-            assertEquals(2, rewards.getPendingCurrency());
+            assertEquals(20, rewards.getPendingCurrency());
         }
         byte[] saved = Files.readAllBytes(save);
         run.close();
         events.publish(new EnemyDefeatedEvent("endless", "late"));
         assertEquals(SettlementResult.SUCCESS, rewards.retryPendingRewards());
-        assertEquals(2, assets.getBalance());
+        assertEquals(20, assets.getBalance());
         assertEquals(0, rewards.getPendingCurrency());
         assertArrayEquals(saved, Files.readAllBytes(save));
     }
@@ -78,7 +78,7 @@ class EndlessRewardsTest {
                 events.publish(new EnemyDefeatedEvent(runId, "same"));
             }
         }
-        assertEquals(2, assets.getBalance());
+        assertEquals(20, assets.getBalance());
     }
 
     @Test
@@ -95,7 +95,7 @@ class EndlessRewardsTest {
             events.publish(new EnemyDefeatedEvent("first", "late"));
             events.publish(new EnemyDefeatedEvent("second", "enemy"));
         }
-        assertEquals(2, assets.getBalance());
+        assertEquals(20, assets.getBalance());
     }
 
     @Test
@@ -117,14 +117,14 @@ class EndlessRewardsTest {
             }
         }
         assertEquals(SettlementResult.SETTLEMENT_FAILED, rewards.getLastResult());
-        assertEquals(2, rewards.getPendingCurrency());
+        assertEquals(20, rewards.getPendingCurrency());
         assertEquals(Integer.MAX_VALUE, assets.getBalance());
         assertFalse(Files.exists(save));
         assertEquals(PurchaseResult.SUCCESS, shop().purchase(PermanentUpgrade.HULL.getProductId(1)));
         assertEquals(SettlementResult.SUCCESS, rewards.retryPendingRewards());
         assertEquals(SettlementResult.SUCCESS, rewards.retryPendingRewards());
         assertEquals(0, rewards.getPendingCurrency());
-        assertEquals(Integer.MAX_VALUE - 98, files.loadPlayerAssets(save).getBalance());
+        assertEquals(Integer.MAX_VALUE - 80, files.loadPlayerAssets(save).getBalance());
     }
 
     @Test
@@ -139,17 +139,17 @@ class EndlessRewardsTest {
             }
         }
         assertEquals(SettlementResult.SAVE_FAILED, rewards.getLastResult());
-        assertEquals(100, assets.getBalance());
+        assertEquals(280, assets.getBalance());
         assertEquals(0, rewards.getPendingCurrency());
         assertEquals(PurchaseResult.SUCCESS, shop().purchase(PermanentUpgrade.HULL.getProductId(1)));
         assertEquals(SettlementResult.SAVE_FAILED, rewards.retryPendingRewards());
-        assertEquals(0, assets.getBalance());
+        assertEquals(180, assets.getBalance());
         Files.delete(blocker);
         Files.delete(save);
         assertEquals(SettlementResult.SUCCESS, rewards.retryPendingRewards());
         assertEquals(SettlementResult.SUCCESS, rewards.retryPendingRewards());
         PlayerAssetsState saved = files.loadPlayerAssets(save);
-        assertEquals(0, saved.getBalance());
+        assertEquals(180, saved.getBalance());
         assertTrue(saved.getUnlockedContentIds().contains(PermanentUpgrade.HULL.getProductId(1)));
     }
 
@@ -164,16 +164,16 @@ class EndlessRewardsTest {
         try (EndlessRewards.RunSubscription run = rewards.subscribe(events, "endless")) {
             events.publish(new EnemyDefeatedEvent("endless", "one"));
             events.publish(new EnemyDefeatedEvent("endless", "one"));
-            assertEquals((long) Integer.MAX_VALUE + 1, rewards.getPendingCurrency());
+            assertEquals((long) Integer.MAX_VALUE + 10, rewards.getPendingCurrency());
         }
         assertEquals(Integer.MAX_VALUE, assets.getBalance());
-        assertEquals(1, rewards.getPendingCurrency());
+        assertEquals(10, rewards.getPendingCurrency());
         assertEquals(SettlementResult.SETTLEMENT_FAILED, rewards.getLastResult());
         assertEquals(PurchaseResult.SUCCESS, shop().purchase(PermanentUpgrade.HULL.getProductId(1)));
         assertEquals(SettlementResult.SUCCESS, rewards.retryPendingRewards());
-        assertEquals(Integer.MAX_VALUE - 99, assets.getBalance());
+        assertEquals(Integer.MAX_VALUE - 90, assets.getBalance());
         assertEquals(0, rewards.getPendingCurrency());
-        assertEquals(Integer.MAX_VALUE - 99, files.loadPlayerAssets(save).getBalance());
+        assertEquals(Integer.MAX_VALUE - 90, files.loadPlayerAssets(save).getBalance());
     }
 
     private ShopController shop() {

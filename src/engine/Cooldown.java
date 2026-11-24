@@ -101,6 +101,22 @@ public class Cooldown {
 	}
 
 	/**
+	 * Preserves the remaining cooldown after a gameplay pause.
+	 *
+	 * @param pausedMillis duration of the pause
+	 */
+	public final void pauseFor(final long pausedMillis) {
+		if (pausedMillis < 0) {
+			throw new IllegalArgumentException(
+					"Pause duration cannot be negative.");
+		}
+
+		if (this.time != 0 && pausedMillis > 0) {
+			this.time = Math.addExact(this.time, pausedMillis);
+		}
+	}
+
+	/**
 	 * Restarts the cooldown.
 	 */
 	public final void reset() {

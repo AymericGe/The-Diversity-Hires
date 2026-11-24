@@ -29,19 +29,50 @@ public final class ShopController {
     private final PurchaseSystem purchases;
     private final List<ShopProduct> products;
     private SaveStatus saveStatus = SaveStatus.NOT_NEEDED;
+    private final boolean persistent;
 
     public ShopController(PlayerAssets assets, FileManager files) {
         this(assets, files, ShopProducts.availableProducts());
     }
 
+    /**
+     * Creates a temporary Shop for the current run.
+     * Purchases must never be written to account saves.
+     */
+    public static ShopController forRun(
+            PlayerAssets runAssets,
+            FileManager files) {
+
+        return new ShopController(
+                runAssets,
+                files,
+                ShopProducts.runProducts(),
+                state -> { },
+                false);
+    }
+
+
     public ShopController(PlayerAssets assets, FileManager files, List<ShopProduct> definitions) {
         this(assets, files, definitions, state -> files.savePlayerAssets(state));
     }
 
-    ShopController(PlayerAssets assets, FileManager files, List<ShopProduct> definitions, AssetSaver saver) {
-        if (assets == null || files == null || definitions == null || saver == null) {
-            throw new IllegalArgumentException("Shop dependencies cannot be null.");
+
+    ShopController(PlayerAssets assets, FileManager files,
+                   List<ShopProduct> definitions, AssetSaver saver) {
+        this(assets, files, definitions, saver, true);
+    }
+
+    private ShopController(PlayerAssets assets, FileManager files,
+                           List<ShopProduct> definitions, AssetSaver saver,
+                           boolean persistent) {
+
+        if (assets == null || files == null
+                || definitions == null || saver == null) {
+            throw new IllegalArgumentException(
+                    "Shop dependencies cannot be null.");
         }
+
+        this.persistent = persistent;
         this.assets = assets;
         this.saver = saver;
         ShopCatalog catalog = new ShopCatalog();
@@ -99,7 +130,9 @@ public final class ShopController {
             }
         }
         PurchaseResult result = purchases.purchaseUnlockable(productId);
-        if (result == PurchaseResult.SUCCESS) saveLatestAssets();
+        if (result == PurchaseResult.SUCCESS && persistent) {
+            saveLatestAssets();
+        }
         return result;
     }
 
