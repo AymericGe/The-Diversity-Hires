@@ -29,6 +29,7 @@ import entity.Bullet;
 import entity.BulletPool;
 import entity.Entity;
 import entity.Ship;
+import entity.ShipType;
 import entity.ZigzagEnemyShip;
 import engine.DifficultyAdjustWhilePlaying;
 
@@ -65,6 +66,8 @@ public class InfiniteGameScreen extends Screen {
 	private int lives;
 	/** Lives the player started with. */
 	private final int maxLives;
+    /** Ship selected by the player in Hangar. */
+    private final ShipType selectedShipType;
 	/** Total bullets shot by the player. */
 	private int bulletsShot;
 	private int shipsDestroyed;
@@ -85,11 +88,27 @@ public class InfiniteGameScreen extends Screen {
 		this(gameState, width, height, fps, null);
 	}
 
-	public InfiniteGameScreen(final GameState gameState, final int width,
-			final int height, final int fps, final RunSession runSession) {
-		super(width, height, fps);
-		this.runSession = runSession;
-		this.recordsService = Core.getRecordsService();
+
+    public InfiniteGameScreen(final GameState gameState, final int width,
+                              final int height, final int fps, final RunSession runSession) {
+        this(gameState, width, height, fps,
+                runSession, ShipType.STANDARD);
+    }
+
+    public InfiniteGameScreen(final GameState gameState, final int width,
+                              final int height, final int fps, final RunSession runSession,
+                              final ShipType selectedShipType) {
+
+        super(width, height, fps);
+
+        if (selectedShipType == null) {
+            throw new IllegalArgumentException(
+                    "Selected ship type cannot be null.");
+        }
+
+        this.selectedShipType = selectedShipType;
+        this.runSession = runSession;
+        this.recordsService = Core.getRecordsService();
 		this.recordsEvents.subscribe(EnemyDefeatedEvent.class,
 				new GameplayEventListener<EnemyDefeatedEvent>() {
 			public void onEvent(final EnemyDefeatedEvent event) {
@@ -108,7 +127,12 @@ public class InfiniteGameScreen extends Screen {
 	public final void initialize() {
 		super.initialize();
 
-		this.ship = new Ship(this.width / 2, this.height - 30);
+        this.ship = new Ship(
+                this.width / 2,
+                this.height - 30,
+                this.selectedShipType);
+
+        this.ship.setBaseColor(ShipCustomization.getColor());
 		this.enemies = new ArrayList<ZigzagEnemyShip>();
 		this.bullets = new HashSet<Bullet>();
 		this.enemyBullets = new HashSet<Bullet>();
