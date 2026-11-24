@@ -180,29 +180,28 @@ public class InfiniteGameScreen extends Screen {
 		return this.returnCode;
 	}
 
-	protected final void update() {
-		super.update();
-		// While paused, only the pause menu runs; the game stays frozen.
-		if (updatePause())
-			return;
-		if (this.recordsService != null) {
-			long now = System.currentTimeMillis();
-			if (this.visibleAchievement == null || now >= this.achievementNoticeUntil) {
-				this.visibleAchievement = this.recordsService.pollNotification();
+    protected final void update() {
+        super.update();
+        // While paused, only the pause menu runs; the game stays frozen.
+        if (updatePause())
+            return;
+        if (this.recordsService != null) {
+            long now = System.currentTimeMillis();
+            if (this.visibleAchievement == null || now >= this.achievementNoticeUntil) {
+                this.visibleAchievement = this.recordsService.pollNotification();
                 if (this.visibleAchievement != null) {
                     AudioManager.playSFX("audio/sfx/achievement_unlock.wav");
                 }
-				this.achievementNoticeUntil = this.visibleAchievement == null ? 0 : now + 3000;
-			}
-		}
+                this.achievementNoticeUntil = this.visibleAchievement == null ? 0 : now + 3000;
+            }
+        }
 
+        //update the current lives remaining to the DifficultyAdjustWhilePlaying class
+        DifficultyAdjustWhilePlaying.getInstance().update(this.lives);
 
-		//update the current lives remaining to the DifficultyAdjustWhilePlaying class
-		DifficultyAdjustWhilePlaying.getInstance().update(this.lives);
+        if (this.inputDelay.checkFinished() && !this.gameOver) {
 
-		if (this.inputDelay.checkFinished() && !this.gameOver) {
-
-// Open the Shop once per P key press.
+            // Open the Shop once per P key press.
             boolean shopKeyDown =
                     inputManager.isKeyDown(KeyEvent.VK_P);
 
@@ -218,46 +217,46 @@ public class InfiniteGameScreen extends Screen {
             }
 
             if (runSession != null) runSession.startActiveSegment(System.nanoTime());
-			if (runSession != null && recordsService != null)
-				recordsService.activeDuration(runSession.getRunId(), runSession.getActiveDurationMillis(System.nanoTime()));
+            if (runSession != null && recordsService != null)
+                recordsService.activeDuration(runSession.getRunId(), runSession.getActiveDurationMillis(System.nanoTime()));
 
-			boolean escapeDown =
-					inputManager.isKeyDown(KeyEvent.VK_ESCAPE);
+            boolean escapeDown =
+                    inputManager.isKeyDown(KeyEvent.VK_ESCAPE);
 
-			if (this.ignoreEscapeUntilRelease && !escapeDown) {
-				this.ignoreEscapeUntilRelease = false;
-			}
+            // After closing the Shop, ignore Esc until it has been released.
+            if (this.ignoreEscapeUntilRelease && !escapeDown) {
+                this.ignoreEscapeUntilRelease = false;
+            }
 
-			if (escapeDown
-					&& !this.ignoreEscapeUntilRelease
-					&& this.pauseMenu.isEscapeFree(inputManager)) {
-				abandonRun();
-				return;
-			}
+            if (escapeDown
+                    && !this.ignoreEscapeUntilRelease
+                    && this.pauseMenu.isEscapeFree(inputManager)) {
+                abandonRun();
+                return;
+            }
 
-			updatePlayerControls();
-			spawnEnemy();
-			moveEnemies();
-			shootEnemies();
-		}
-			
+            updatePlayerControls();
+            spawnEnemy();
+            moveEnemies();
+            shootEnemies();
+        }
 
-		this.ship.update();
-		manageCollisions();
-		cleanBullets();
-		this.particleSystem.update();
-		draw();
+        this.ship.update();
+        manageCollisions();
+        cleanBullets();
+        this.particleSystem.update();
+        draw();
 
-		if (this.lives == 0 && !this.gameOver) {
-			this.gameOver = true;
-			AudioManager.playSFX("audio/sfx/game_over.wav");
-			if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
-			this.screenFinishedCooldown.reset();
-		}
+        if (this.lives == 0 && !this.gameOver) {
+            this.gameOver = true;
+            AudioManager.playSFX("audio/sfx/game_over.wav");
+            if (runSession != null) runSession.stopActiveSegment(System.nanoTime());
+            this.screenFinishedCooldown.reset();
+        }
 
-		if (this.gameOver && this.screenFinishedCooldown.checkFinished())
-			this.isRunning = false;
-	}
+        if (this.gameOver && this.screenFinishedCooldown.checkFinished())
+            this.isRunning = false;
+    }
 
 	/** Leaves the run early; it counts as abandoned for the records. */
 	private void abandonRun() {

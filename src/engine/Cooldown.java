@@ -88,43 +88,43 @@ public class Cooldown {
 	 * @throws IllegalStateException
 	 *             If this cooldown has variable duration.
 	 */
-	public final void setDuration(final int milliseconds) {
-		if (milliseconds < 0)
-			throw new IllegalArgumentException(
-					"Cooldown duration must not be negative.");
-		if (this.variance != 0)
-			throw new IllegalStateException(
-					"Cannot change a variable cooldown duration.");
+    public final void setDuration(final int milliseconds) {
+        if (milliseconds < 0)
+            throw new IllegalArgumentException(
+                    "Cooldown duration must not be negative.");
+        if (this.variance != 0)
+            throw new IllegalStateException(
+                    "Cannot change a variable cooldown duration.");
 
-		this.milliseconds = milliseconds;
-		this.duration = milliseconds;
-	}
+        this.milliseconds = milliseconds;
+        this.duration = milliseconds;
+    }
 
-	/**
-	 * Preserves the remaining cooldown after a gameplay pause.
-	 *
-	 * @param pausedMillis duration of the pause
-	 */
-	public final void pauseFor(final long pausedMillis) {
-		if (pausedMillis < 0) {
-			throw new IllegalArgumentException(
-					"Pause duration cannot be negative.");
-		}
+    /**
+     * Preserves the remaining cooldown after a gameplay pause.
+     *
+     * @param pausedMillis duration of the pause
+     */
+    public final void pauseFor(final long pausedMillis) {
+        if (pausedMillis < 0) {
+            throw new IllegalArgumentException(
+                    "Pause duration cannot be negative.");
+        }
 
-		if (this.time != 0 && pausedMillis > 0) {
-			this.time = Math.addExact(this.time, pausedMillis);
-		}
-	}
+        if (this.time != 0 && pausedMillis > 0) {
+            this.time = Math.addExact(this.time, pausedMillis);
+        }
+    }
 
-	/**
-	 * Restarts the cooldown.
-	 */
-	public final void reset() {
-		this.time = GameClock.currentTimeMillis();
-		if (this.variance != 0)
-			this.duration = calculateDuration(this.milliseconds, this.variance,
-					Math.random());
-	}
+    /**
+     * Restarts the cooldown.
+     */
+    public final void reset() {
+        this.time = GameClock.currentTimeMillis();
+        if (this.variance != 0)
+            this.duration = calculateDuration(this.milliseconds, this.variance,
+                    Math.random());
+    }
 
 	/**
 	 * Calculates a duration within the inclusive base +/- variance range.
