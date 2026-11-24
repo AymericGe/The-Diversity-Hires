@@ -240,14 +240,7 @@ public class InfiniteGameScreen extends Screen {
 			moveEnemies();
 			shootEnemies();
 		}
-				return;
-			}
-
-			updatePlayerControls();
-			spawnEnemy();
-			moveEnemies();
-			shootEnemies();
-		}
+			
 
 		this.ship.update();
 		manageCollisions();
