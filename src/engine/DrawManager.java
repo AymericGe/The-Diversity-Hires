@@ -1116,7 +1116,7 @@ public final class DrawManager {
     /** Shows the Shop shortcut during Endless gameplay. */
     public void drawEndlessShopHint(final Screen screen) {
         drawShopText(
-                "P - Open Shop",
+                "O - Open Shop",
                 screen.getWidth() - 130,
                 screen.getHeight() - 16,
                 11,
