@@ -1113,19 +1113,7 @@ public final class DrawManager {
         drawShopCentered(screen, "WASD also works   Space/Enter: confirm", height - 21);
     }
 
-    /** Shows the Shop shortcut during Endless gameplay. */
-    public void drawEndlessShopHint(final Screen screen) {
-        drawShopText(
-                "O - Open Shop",
-                screen.getWidth() - 130,
-                screen.getHeight() - 16,
-                11,
-                Color.CYAN,
-                122);
-    }
-
-
-
+    
     /**
      * Displays the consumable life-refill option
      * in the Run Shop.
