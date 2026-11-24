@@ -21,7 +21,6 @@ import hud.FloatingScoreHud;
 import currency.PermanentUpgrade;
 import currency.PlayerAssetsState;
 import currency.ShopCatalog.Category;
-import engine.DrawManager.SpriteType;
 import shop.ShopController.SaveStatus;
 import shop.ShopProduct;
 import records.Achievement;
@@ -1605,7 +1604,7 @@ public final class DrawManager {
         int barWidth = 200;
         int barHeight = 8;
         int barX = (screen.getWidth() - barWidth) / 2;
-        int barY = 32;
+        int barY = 64;
 
         float ratio = Math.max(0.0f, (float) currentHp / maxHp);
         int fillWidth = (int) (barWidth * ratio);
@@ -1615,24 +1614,25 @@ public final class DrawManager {
         backBufferGraphics.fillRect(barX, barY, barWidth, barHeight);
 
         // 2. Health Fill (Green > Orange > Red based on health ratio)
-        if (ratio > 0.5f) {
-            backBufferGraphics.setColor(Color.GREEN);
-        } else if (ratio > 0.2f) {
-            backBufferGraphics.setColor(Color.ORANGE);
+        if (ratio > 0.5) {
+            backBufferGraphics.setColor(GameColors.HIGHLIGHT);
+        } else if (ratio > 0.25) {
+            backBufferGraphics.setColor(GameColors.EXPLOSION_ORANGE);
         } else {
-            backBufferGraphics.setColor(Color.RED);
+            backBufferGraphics.setColor(GameColors.DAMAGE);
         }
         backBufferGraphics.fillRect(barX, barY, fillWidth, barHeight);
 
         // 3. Border Outline
-        backBufferGraphics.setColor(Color.WHITE);
+        backBufferGraphics.setColor(GameColors.TEXT);
         backBufferGraphics.drawRect(barX, barY, barWidth, barHeight);
 
         // 4. Boss Name / Label above bar
         backBufferGraphics.setFont(fontRegular);
         String label = hudInfo.getBossType().name();
+        int labelY = barY - fontRegularMetrics.getDescent() - 4;
         int textWidth = fontRegularMetrics.stringWidth(label);
-        backBufferGraphics.drawString(label, (screen.getWidth() - textWidth) / 2, barY - 4);
+        backBufferGraphics.drawString(label, (screen.getWidth() - textWidth) / 2, labelY);
     }
 
     /**
