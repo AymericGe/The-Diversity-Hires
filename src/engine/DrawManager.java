@@ -1529,7 +1529,7 @@ public final class DrawManager {
         int barWidth = 200;
         int barHeight = 8;
         int barX = (screen.getWidth() - barWidth) / 2;
-        int barY = 32;
+        int barY = 64;
 
         float ratio = Math.max(0.0f, (float) currentHp / maxHp);
         int fillWidth = (int) (barWidth * ratio);
@@ -1555,8 +1555,9 @@ public final class DrawManager {
         // 4. Boss Name / Label above bar
         backBufferGraphics.setFont(fontRegular);
         String label = hudInfo.getBossType().name();
+        int labelY = barY - fontRegularMetrics.getDescent() - 4;
         int textWidth = fontRegularMetrics.stringWidth(label);
-        backBufferGraphics.drawString(label, (screen.getWidth() - textWidth) / 2, barY - 4);
+        backBufferGraphics.drawString(label, (screen.getWidth() - textWidth) / 2, labelY);
     }
 
     /**
