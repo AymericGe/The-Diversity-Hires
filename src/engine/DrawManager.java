@@ -1112,8 +1112,6 @@ public final class DrawManager {
         drawShopCentered(screen, "Up/Down: section   Left/Right: product", height - 37);
         drawShopCentered(screen, "WASD also works   Space/Enter: confirm", height - 21);
     }
-
-    
     /**
      * Displays the consumable life-refill option
      * in the Run Shop.
